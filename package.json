@@ -1,0 +1,16 @@
+{
+  "name": "neeo_driver-kodi",
+  "version": "0.0.1",
+  "description": "This driver adds KODI support to NEEO.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Mattias, Niels",
+  "license": "ISC",
+  "dependencies": {
+    "neeo-sdk": "^0.37.2",
+	"btoa": "^1.1.2",
+    "request": "^2.81.0"
+  }
+}
