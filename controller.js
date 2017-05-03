@@ -26,10 +26,10 @@ module.exports.onButtonPressed = function onButtonPressed(deviceid, name) {
         cmd = {"jsonrpc": "2.0", "method": "Input.ExecuteAction","params":{ "action": "stop"}, "id": 1};
         break;
     case 'SKIP BACKWARD':
-        cmd = {"jsonrpc":"2.0","method":"Player.Seek","params":{ "playerid":1,"value":"smallbackward"},"id":1}
+        cmd = {"jsonrpc": "2.0", "method": "Input.ExecuteAction","params":{ "action": "skipprevious"}, "id": 1};
         break;
     case 'SKIP FORWARD':
-        cmd = {"jsonrpc":"2.0","method":"Player.Seek","params":{ "playerid":1,"value":"smallforward"},"id":1}
+        cmd = {"jsonrpc": "2.0", "method": "Input.ExecuteAction","params":{ "action": "skipnext"}, "id": 1};
         break;
     case 'FORWARD':
         cmd = {"jsonrpc": "2.0", "method": "Player.SetSpeed", "params": {"playerid":1, "speed":2}, "id":1};
@@ -47,7 +47,7 @@ module.exports.onButtonPressed = function onButtonPressed(deviceid, name) {
         cmd = {"jsonrpc": "2.0", "method": "Input.PlayPause", "id": 1};
         break;
     case 'INFO':
-        cmd = {"jsonrpc": "2.0", "method": "Input.Info", "id": 1};
+        cmd = {"jsonrpc": "2.0", "method": "Input.ExecuteAction","params":{ "action": "info"}, "id": 1};
         break;
     case 'CHANNEL UP':
         cmd = {"jsonrpc": "2.0", "method": "Input.ExecuteAction","params":{ "action": "channelup"}, "id": 1};
@@ -129,6 +129,9 @@ module.exports.onButtonPressed = function onButtonPressed(deviceid, name) {
         break;
     case 'MUTE TOGGLE':
         cmd = {"jsonrpc": "2.0", "method": "Input.ExecuteAction","params":{ "action": "mute"}, "id": 1};
+        break;
+    default:
+        cmd = {"jsonrpc": "2.0", "method": "Input.ExecuteAction","params":{ "action": deviceid}, "id": 1};
         break;
     }
 
