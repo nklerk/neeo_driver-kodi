@@ -1,7 +1,7 @@
 'use strict';
 /*
 * Edit the folowing setting.
-* 
+* Testing 123
 */
 
 const kodi_ip = '10.2.1.28';
