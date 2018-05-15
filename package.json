@@ -1,6 +1,6 @@
 {
 	"name": "neeo_driver-kodi",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "This driver adds KODI support to NEEO.",
 	"main": "index.js",
 	"author": "Niels de Klerk",
@@ -10,7 +10,8 @@
 		"bluebird": "^3.5.1",
 		"i": "^0.3.6",
 		"mdns-js": "^1.0.1",
-		"neeo-sdk": "file:./install/neeo-sdk-0.50.2",
+		"neeo-sdk": "github:NEEOInc/neeo-sdk#master",
+		"neeo-sdk@next": "^0.50.2",
 		"node-arp": "^1.0.6",
 		"node-kodi": "0.0.2-alpha",
 		"node-wol": "^0.1.1"
