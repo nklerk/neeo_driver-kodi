@@ -2,4 +2,3 @@ node_modules
 install
 test.js
 .git
-package-lock.json
