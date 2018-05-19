@@ -1,90 +1,30 @@
 'use strict';
-
 const images = require('./images');
 const neeoapi = require('neeo-sdk');
-const kodi_rpc = require('node-kodi');
-const kodiDiscover = require('./kodi-discover')
+const kodiController = require('./kodi-controller');
+const tools = require('./tools');
 
 const DEFAULT_PATH = '.';
-
 let recentMovies = {};
 let allMovies = {};
 let timestamp = {};
 
-let globalOptions = {
-  persistImages: false,
-  hideThumbnails: false,
-};
-
 module.exports = {
   browse,
-  setOptions,
-  startMovie,
-  sendCommand
+  action
 };
 
-
-function getRecentlyAddedMovies(kodiParams){
-  console.log ("Updated database getRecentlyAddedMovies");
-  if (kodiParams && kodiParams.ip && kodiParams.port){
-    let kodiRPC = new kodi_rpc({
-      url: `${kodiParams.ip}:${kodiParams.port}`,
-      user: "Kodi",
-      password: ""
-    });
-    kodiRPC.videolibrary.getRecentlyAddedMovies({"limits": { "start" : 0, "end": 30 }}).then((x)=>{
-      recentMovies[kodiParams.mac] =  x.movies;
-      console.log ("Updated database with:", recentMovies[kodiParams.mac], "items");
-    });
-  }
+function action (deviceId, movieId){
+  console.log ("Now starting movie with movieid:",movieId);
+  const object = {movieId: parseInt(movieId, 10)}
+  kodiController.library.playerOpen(deviceId,object);
 }
 
-function getAllMovies(kodiParams){
-  console.log ("Updated database allMovies");
-  if (kodiParams && kodiParams.ip && kodiParams.port){
-    let kodiRPC = new kodi_rpc({
-      url: `${kodiParams.ip}:${kodiParams.port}`,
-      user: "Kodi",
-      password: ""
-    });
-    kodiRPC.videolibrary.getMovies({"sort": {"order": "ascending", "method": "title"}}).then((x)=>{
-      allMovies[kodiParams.mac] =  x.movies;
-      console.log ("Updated database with:", allMovies[kodiParams.mac], "items");
-    });
-  }
-}
+/* function sendCommand (deviceId,method,params){
+  kodiController.rpc(deviceId,method,params)
+} */
 
-
-
-function startMovie (kodiParams, movieid){
-  console.log ("Now starting movie with movieid:",movieid);
-  movieid = parseInt(movieid, 10);
-  if (kodiParams && kodiParams.ip && kodiParams.port){
-    let kodiRPC = new kodi_rpc({
-      url: `${kodiParams.ip}:${kodiParams.port}`,
-      user: "Kodi",
-      password: ""
-    });
-    kodiRPC.player.open({item:{movieid}});
-  }
-}
-
-function sendCommand (kodiParams,method,params){
-  console.log ("Sending command:",method,params);
-  if (kodiParams && kodiParams.ip && kodiParams.port){
-    let kodiRPC = new kodi_rpc({
-      url: `${kodiParams.ip}:${kodiParams.port}`,
-      user: "Kodi",
-      password: ""
-    });
-    kodiRPC.rpc(method,params);
-  }
-}
-
-
-
-function browse(kodiParams, params) {
-  
+function browse(devideId, params) {
   console.log ("BROWSEING", params.browseIdentifier);
   const browseIdentifier = params.browseIdentifier || DEFAULT_PATH;
   const listOptions = {
@@ -95,51 +35,25 @@ function browse(kodiParams, params) {
 
   //If All Movies
   if (browseIdentifier == "All Movies"){
-    getAllMovies(kodiParams);
-    if (allMovies[kodiParams.mac]){
-      return listMovies(kodiParams, allMovies[kodiParams.mac], listOptions);
-    } else {
-      return baseListMenu(kodiParams);
-    }
+    return kodiController.library.getMovies(devideId).then((listItems)=>{
+      return listMovies(devideId, listItems, listOptions);
+    });
 
   //If Recent Movies
   } else if (browseIdentifier == "Recent Movies") {
-    getRecentlyAddedMovies(kodiParams);
-    if (recentMovies[kodiParams.mac]){
-      return listMovies(kodiParams, recentMovies[kodiParams.mac], listOptions);
-    } else {
-      return baseListMenu(kodiParams);
-    }
-    
+    return kodiController.library.getRecentlyAddedMovies(devideId).then((listItems)=>{
+      return listMovies(devideId, listItems, listOptions);
+    }); 
+ 
   //Base Menu
   } else {
-    updateDatabase(kodiParams);
-    return baseListMenu(kodiParams);
+    return baseListMenu(devideId);
   }
 }
-
-function setOptions(params) {
-  globalOptions = Object.assign({}, globalOptions, params);
-}
-
-
-function updateDatabase(kodiParams){
-  if (typeof kodiParams !== "undefined" && (typeof timestamp[kodiParams.mac] === "undefined" || (Date.now() - timestamp[kodiParams.mac] > 6000))){
-    console.log("->  Updating all databases.")
-    getRecentlyAddedMovies(kodiParams);
-    getAllMovies(kodiParams);
-    timestamp[kodiParams.mac] = Date.now();
-  } else {
-    console.log("XXX Updating all databases.")
-  }
-}
-
 
 //////////////////////////////////
 // List Movies
-
-function listMovies(kodiParams, movies, listOptions) {
-  
+function listMovies(deviceId, movies, listOptions) {
   const options = {
     title: `Browsing ${listOptions.browseIdentifier}`,
     totalMatchingItems: movies.length,
@@ -147,6 +61,7 @@ function listMovies(kodiParams, movies, listOptions) {
     offset: listOptions.offset,
     limit: listOptions.limit,
   };
+
   const list = neeoapi.buildBrowseList(options);
   const itemsToAdd = list.prepareItemsAccordingToOffsetAndLimit(movies);
 
@@ -155,11 +70,10 @@ function listMovies(kodiParams, movies, listOptions) {
   list.addListHeader(options.browseIdentifier);
   itemsToAdd.map((movie) => {
     const listItem = {
-      title: movieTitle(movie),
-      thumbnailUri: imageToHttp(kodiParams, movie.thumbnail),
+      title: tools.movieTitle(movie),
+      thumbnailUri: tools.imageToHttp(deviceId, movie.thumbnail),
       actionIdentifier: `${movie.movieid}`
     };
-
     list.addListItem(listItem);
   });
   return list;
@@ -168,7 +82,7 @@ function listMovies(kodiParams, movies, listOptions) {
 
 //////////////////////////////////
 // Base Movie Menu
-function baseListMenu(kodiParams){
+function baseListMenu(deviceId){
 
   const options = {
     title: `Movies`,
@@ -179,7 +93,7 @@ function baseListMenu(kodiParams){
   };
   const list = neeoapi.buildBrowseList(options);
  
-  if (typeof kodiParams !== "undefined"){
+  if (kodiController.kodiReady(deviceId)){
     list.addListHeader('Movies');
     list.addListItem({
       title: "All Movies",
@@ -191,50 +105,8 @@ function baseListMenu(kodiParams){
       thumbnailUri: images.icon_movie,
       browseIdentifier: "Recent Movies"
     });
-    /* list.addListHeader('TV Shows');
-    list.addListItem({
-      title: "TV Shows",
-      thumbnailUri: images.icon_tvshow,
-      browseIdentifier: "TV Shows"
-    });
-    list.addListItem({
-      title: "Recent Episodes",
-      thumbnailUri: images.icon_tvshow,
-      browseIdentifier: "Recent Episodes"
-    });
-    list.addListHeader('Music');
-    list.addListItem({
-      title: "Music Videos",
-      thumbnailUri: images.icon_music,
-      browseIdentifier: "Music Videos"
-    });
-    list.addListItem({
-      title: "Albums",
-      thumbnailUri: images.icon_music, 
-      browseIdentifier: "Albums"
-    });
-    list.addListItem({
-      title: "Tracks",
-      thumbnailUri: images.icon_music, 
-      browseIdentifier: "Tracks"
-    });
-    list.addListHeader('PVR');
-    list.addListItem({
-      title: "TV Channels",
-      thumbnailUri: images.icon_pvr,
-      browseIdentifier: "TV Channels"
-    });
-    list.addListItem({
-      title: "Radio Stations",
-      thumbnailUri: images.icon_pvr, 
-      browseIdentifier: "Radio Stations"
-    });
-    list.addListItem({
-      title: "Recordings",
-      thumbnailUri: images.icon_pvr, 
-      browseIdentifier: "Recordings"
-    }); */
   } else {
+    kodiController.discover();
     list.addListHeader('Kodi is not connected');
     list.addListItem({
       title: "Tap to refresh",
@@ -242,17 +114,5 @@ function baseListMenu(kodiParams){
       browseIdentifier: "."
     });
   }
-
   return list;
-}
-
-function imageToHttp (kodiParams, uri) {
-  uri = encodeURIComponent(uri)
-  let url = `http://${kodiParams.ip}:${kodiParams.port}/image/${uri}`
-  return url;
-}
-
-function movieTitle (movie) {
-  const year = ' ('+movie.year+')' || '';
-  return movie.label+year;
 }
