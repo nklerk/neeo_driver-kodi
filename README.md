@@ -8,9 +8,9 @@ This driver is in an early alpha stage and won't work with the current NEEO vers
 Feel free to have a look though.
 
 In Kodi make sure to enable the following settings: 
-  # "Announce services to other systems", 
-  # "Allow remote control via HTTP",
-  # "Allow remote control from applications on other systems". 
+  - "Announce services to other systems", 
+  - "Allow remote control via HTTP",
+  - "Allow remote control from applications on other systems". 
 
 Caviats.
 - Kodi password must be set to nothing. Username/Password is not handled.
@@ -32,6 +32,9 @@ Upcomming features:
 - Browse through TV Channels, Radio Channels and recordings.
 
 
+# Version 1.0.3
+- Rewritten BrowserService for TV Shows
+
 # Version 1.0.2
 - Restructured discovery process.
 - Restructured controller for Kodi.
@@ -39,3 +42,4 @@ Upcomming features:
 - Added BrowserService for music
 - Added BrowserService for pvr
 - Added BrowserService for TV Shows
+

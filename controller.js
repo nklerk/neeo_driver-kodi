@@ -27,41 +27,34 @@ function movieLibraryGetter(deviceId, params) {
 }
 
 function movieLibraryAction(deviceId, params) {
-  let kodiParams = kodiController.getKodi(deviceId);
-  browserServiceMovies.action(kodiParams, params.actionIdentifier)
+  browserServiceMovies.action(deviceId, params.actionIdentifier)
 }
 
-//Musiv
+//Music
 function musicLibraryGetter(deviceId, params) {
-  let kodiParams = kodiController.getKodi(deviceId);
-  return browserServiceMusic.browse(kodiParams, params)
+  return browserServiceMusic.browse(deviceId, params)
 }
 
 function musicLibraryAction(deviceId, params) {
-  let kodiParams = kodiController.getKodi(deviceId);
-  browserServiceMusic.startMovie(kodiParams, params.actionIdentifier)
+  browserServiceMusic.action(deviceId, params.actionIdentifier)
 }
 
 //TV Show
 function tvshowLibraryGetter(deviceId, params) {
-  let kodiParams = kodiController.getKodi(deviceId);
-  return browserServiceTVShow.browse(kodiParams, params)
+  return browserServiceTVShow.browse(deviceId, params)
 }
 
 function tvshowLibraryAction(deviceId, params) {
-  let kodiParams = kodiController.getKodi(deviceId);
-  browserServiceTVShow.startMovie(kodiParams, params.actionIdentifier)
+  browserServiceTVShow.action(deviceId, params.actionIdentifier)
 }
 
 // TV
 function pvrLibraryGetter(deviceId, params) {
-  let kodiParams = kodiController.getKodi(deviceId);
-  return browserServicePVR.browse(kodiParams, params)
+  return browserServicePVR.browse(deviceId, params)
 }
 
 function pvrLibraryAction(deviceId, params) {
-  let kodiParams = kodiController.getKodi(deviceId);
-  browserServicePVR.startMovie(kodiParams, params.actionIdentifier)
+  browserServicePVR.action(deviceId, params.actionIdentifier)
 }
 
 //Discovery

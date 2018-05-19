@@ -1,116 +1,107 @@
 'use strict';
-
 const images = require('./images');
 const neeoapi = require('neeo-sdk');
-const kodiDiscover = require('./kodi-controller');
-const kodirpc = require('./kodi-rpc');
+const kodiController = require('./kodi-controller');
 const tools = require('./tools');
 
 const DEFAULT_PATH = '.';
 
-let globalOptions = {
-  persistImages: false,
-  hideThumbnails: false,
-};
-
-let tvShows = {};
-let RecentEpisodes = {};
-let timestamp = {};
-
 module.exports = {
   browse,
-  setOptions,
-  startMovie,
-  sendCommand
+  action
 };
 
-function getRecentEpisodes(kodiParams){
-  console.log ("Updated database getRecentEpisodes");
-  let kodiRPC = kodirpc.build(kodiParams);
-  if (kodiRPC){
-    kodiRPC.videolibrary.getRecentlyAddedEpisodes().then((x)=>{
-      //recentEpisodes[kodiParams.mac] =  x.movies;
-      //console.log ("Updated database with:", tvShows[kodiParams.mac].length, "items");
-    });
-  }
+function action (deviceId, episodeId){
+  console.log ("Now starting episode with episodeid:",episodeId);
+  kodiController.library.playerOpen(deviceId,{episodeid: parseInt(episodeId, 10)});
 }
 
-function getTVShows(kodiParams){
-  console.log ("Updated database getTVShows");
-  let kodiRPC = kodirpc.build(kodiParams);
-  if (kodiRPC){
-    kodiRPC.videolibrary.getTVShows({"sort": {"order": "ascending", "method": "title"}}).then((x)=>{
-      tvShows[kodiParams.mac] =  x.tvshows;
-      console.log ("Updated database with:", tvShows[kodiParams.mac].length, "items");
-    });
-  }
-}
-
-
-
-function startMovie (kodiParams, movieid){
-  console.log ("Now starting movie with movieid:",movieid);
-}
-
-function sendCommand (kodiParams,method,params){
-  console.log ("Sending command:",method,params);
-}
-
-
-
-function browse(kodiParams, params) {
-  
+function browse(devideId, params) {
   const browseIdentifier = params.browseIdentifier || DEFAULT_PATH;
+  console.log ("BROWSEING", browseIdentifier);
   const listOptions = {
     limit: params.limit,
     offset: params.offset,
     browseIdentifier,
   };
-  console.log ("BROWSEING", browseIdentifier);
 
   if (browseIdentifier == "TV Shows"){
-    getTVShows(kodiParams);
-    if (tvShows[kodiParams.mac]){
-      return listMovies(kodiParams, tvShows[kodiParams.mac], listOptions);
-    } else {
-      return baseListMenu(kodiParams);
-    }
+    return kodiController.library.getTVShows(devideId).then((listItems)=>{
+      return formatList(devideId, listItems, listOptions, "TV Shows");
+    });
 
-  //If Recent Episodes
+
   } else if (browseIdentifier == "Recent Episodes") {
-    getRecentEpisodes(kodiParams);
-    if (RecentEpisodes[kodiParams.mac]){
-      return listMovies(kodiParams, RecentEpisodes[kodiParams.mac], listOptions);
-    } else {
-      return baseListMenu(kodiParams);
-    }
+    return kodiController.library.getRecentEpisodes(devideId).then((listItems)=>{
+      return formatList(devideId, listItems, listOptions, "Recent Episodes");
+    }); 
+
+  } else if (browseIdentifier.match(/^tvshowid;[0-9]*;.*$/)) {
+    const browseId = browseIdentifier.split(';');
+    console.log ("DEBUG:", browseId);
+    let id = parseInt(browseId[1], 10);
+    console.log ("DEBUG:", id);
+    return kodiController.library.getTVshowEpisodes(devideId, id).then((listItems)=>{
+      return formatList(devideId, listItems, listOptions, browseId[2]);
+    }); 
     
   //Base Menu
   } else {
-    updateDatabase(kodiParams);
-    return baseListMenu(kodiParams);
+    return baseListMenu(devideId);
   }
 }
-
-function updateDatabase(kodiParams){
-  if (typeof kodiParams !== "undefined" && (typeof timestamp[kodiParams.mac] === "undefined" || (Date.now() - timestamp[kodiParams.mac] > 6000))){
-    console.log("->  Updating all databases.")
-    getRecentEpisodes(kodiParams);
-    getTVShows(kodiParams);
-    timestamp[kodiParams.mac] = Date.now();
-  } else {
-    console.log("XXX Updating all databases.")
-  }
-}
-
-function setOptions(params) {
-  globalOptions = Object.assign({}, globalOptions, params);
-}
-
 
 //////////////////////////////////
-// Base Movie Menu
-function baseListMenu(kodiParams){
+// Format Browsing list
+function formatList(deviceId, listItems, listOptions, title) {
+  const options = {
+    title: `Browsing ${title}`,
+    totalMatchingItems: listItems.length,
+    browseIdentifier: listOptions.browseIdentifier,
+    offset: listOptions.offset,
+    limit: listOptions.limit,
+  };
+
+  const list = neeoapi.buildBrowseList(options);
+  const itemsToAdd = list.prepareItemsAccordingToOffsetAndLimit(listItems);
+
+  console.log ("listOptions.browseIdentifier:", options.browseIdentifier);
+
+  list.addListHeader(title);
+  if (listOptions.browseIdentifier == "TV Shows"){
+    itemsToAdd.map((item) => {
+      const listItem = {
+        title: item.label,
+        thumbnailUri: tools.imageToHttp(deviceId, item.thumbnail),
+        browseIdentifier: `tvshowid;${item.tvshowid};${item.label}`
+      };
+      list.addListItem(listItem);
+    });
+  } else if (listOptions.browseIdentifier == "Recent Episodes") {
+    itemsToAdd.map((item) => {
+      const listItem = {
+        title: tools.episodeTitleA(item),
+        thumbnailUri: tools.imageToHttp(deviceId, item.art.thumb),
+        actionIdentifier: `${item.episodeid}`
+      };
+      list.addListItem(listItem);
+    });
+  } else {
+    itemsToAdd.map((item) => {
+      const listItem = {
+        title: tools.episodeTitleB(item),
+        thumbnailUri: tools.imageToHttp(deviceId, item.art.thumb),
+        actionIdentifier: `${item.episodeid}`
+      };
+      list.addListItem(listItem);
+    });
+  }
+  return list;
+}
+
+
+function baseListMenu(deviceId){
+
   const options = {
     title: `TV Shows`,
     totalMatchingItems: 1,
@@ -120,7 +111,7 @@ function baseListMenu(kodiParams){
   };
   const list = neeoapi.buildBrowseList(options);
  
-  if (typeof kodiParams !== "undefined"){
+  if (kodiController.kodiReady(deviceId)){
     list.addListHeader('TV Shows');
     list.addListItem({
       title: "TV Shows",
@@ -133,6 +124,7 @@ function baseListMenu(kodiParams){
       browseIdentifier: "Recent Episodes"
     });
   } else {
+    kodiController.discover();
     list.addListHeader('Kodi is not connected');
     list.addListItem({
       title: "Tap to refresh",
@@ -141,15 +133,4 @@ function baseListMenu(kodiParams){
     });
   }
   return list;
-}
-
-function imageToHttp (kodiParams, uri) {
-  uri = encodeURIComponent(uri)
-  let url = `http://${kodiParams.ip}:${kodiParams.port}/image/${uri}`
-  return url;
-}
-
-function movieTitle (movie) {
-  const year = ' ('+movie.year+')' || '';
-  return movie.label+year;
 }

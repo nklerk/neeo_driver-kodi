@@ -3,7 +3,9 @@ const kodiController = require('./kodi-controller');
 
 module.exports = {
   imageToHttp,
-  movieTitle
+  movieTitle,
+  episodeTitleA,
+  episodeTitleB,
 };
 
 function imageToHttp (deviceID, uri) {
@@ -16,4 +18,12 @@ function imageToHttp (deviceID, uri) {
 function movieTitle (movie) {
   const year = ' ('+movie.year+')' || '';
   return movie.label+year;
+}
+
+function episodeTitleA (item) {
+  return `${item.season}-${item.episode},  ${item.showtitle}`;
+}
+
+function episodeTitleB (item) {
+  return `${item.season}-${item.episode},  ${item.title}`;
 }

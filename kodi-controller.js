@@ -100,8 +100,7 @@ function kodiReady(deviceID){
 function getRecentlyAddedMovies(deviceId){
 	if (kodiReady(deviceId)){
 		return kodiDB[deviceId].rpc.videolibrary.getRecentlyAddedMovies({"limits": { "start" : 0, "end": 30 }}).then((x)=>{
-			kodiDB[deviceId].library.recentmovies = x.movies;
-			return x.movies;
+			return itemCheck(x, x.movies);
 		});
 	} else {
 		return {}
@@ -111,17 +110,55 @@ function getRecentlyAddedMovies(deviceId){
 function getMovies(deviceId){
 	if (kodiReady(deviceId)){
 		return kodiDB[deviceId].rpc.videolibrary.getMovies({"sort": {"order": "ascending", "method": "title"}}).then((x)=>{
-			kodiDB[deviceId].library.mocies = x.movies;
-			return x.movies;
+			return itemCheck(x, x.movies);
 		});
 	} else {
 		return {}
 	}
 }
 
+function getRecentEpisodes(deviceId){
+	if (kodiReady(deviceId)){
+		return kodiDB[deviceId].rpc.videolibrary.getEpisodes({"limits": { "start" : 0, "end": 30 },"sort": {"order": "descending", "method": "dateadded"}}).then((x)=>{
+			return itemCheck(x, x.episodes);
+		});
+	} else {
+		return {}
+	}
+}
+
+function getTVshowEpisodes(deviceId, showId){
+	if (kodiReady(deviceId)){
+		return kodiDB[deviceId].rpc.videolibrary.getEpisodes({"tvshowid":showId}).then((x)=>{
+			return itemCheck(x, x.episodes);
+		});
+	} else {
+		return {}
+	}
+}
+
+
+function getTVShows(deviceId){
+	if (kodiReady(deviceId)){
+		return kodiDB[deviceId].rpc.videolibrary.getTVShows({"sort": {"order": "ascending", "method": "title"}}).then((x)=>{
+			return itemCheck(x, x.tvshows);
+		});
+	} else {
+		return {}
+	}
+}
+
+function itemCheck (x, items){
+	if (x.limits.total > 0) {
+		return items;
+	} else {
+		return [];
+	}
+}
+
 function playerOpen(deviceId,object){
 	if (kodiReady(deviceId)){
-		kodiDB[deviceId].rpc.player.open({item:{object}});
+		kodiDB[deviceId].rpc.player.open({item:object});
 	}
 }
 
@@ -137,6 +174,9 @@ module.exports = {
 	library:{
 		getRecentlyAddedMovies,
 		getMovies,
+		getTVShows,
+		getRecentEpisodes,
+		getTVshowEpisodes,
 		playerOpen
 	},
 	kodiReady,

@@ -5,9 +5,6 @@ const kodiController = require('./kodi-controller');
 const tools = require('./tools');
 
 const DEFAULT_PATH = '.';
-let recentMovies = {};
-let allMovies = {};
-let timestamp = {};
 
 module.exports = {
   browse,
@@ -16,17 +13,12 @@ module.exports = {
 
 function action (deviceId, movieId){
   console.log ("Now starting movie with movieid:",movieId);
-  const object = {movieId: parseInt(movieId, 10)}
-  kodiController.library.playerOpen(deviceId,object);
+  kodiController.library.playerOpen(deviceId, {movieid: parseInt(movieId, 10)});
 }
 
-/* function sendCommand (deviceId,method,params){
-  kodiController.rpc(deviceId,method,params)
-} */
-
 function browse(devideId, params) {
-  console.log ("BROWSEING", params.browseIdentifier);
   const browseIdentifier = params.browseIdentifier || DEFAULT_PATH;
+  console.log ("BROWSEING", browseIdentifier);
   const listOptions = {
     limit: params.limit,
     offset: params.offset,
@@ -36,13 +28,13 @@ function browse(devideId, params) {
   //If All Movies
   if (browseIdentifier == "All Movies"){
     return kodiController.library.getMovies(devideId).then((listItems)=>{
-      return listMovies(devideId, listItems, listOptions);
+      return formatList(devideId, listItems, listOptions);
     });
 
   //If Recent Movies
   } else if (browseIdentifier == "Recent Movies") {
     return kodiController.library.getRecentlyAddedMovies(devideId).then((listItems)=>{
-      return listMovies(devideId, listItems, listOptions);
+      return formatList(devideId, listItems, listOptions);
     }); 
  
   //Base Menu
@@ -52,27 +44,27 @@ function browse(devideId, params) {
 }
 
 //////////////////////////////////
-// List Movies
-function listMovies(deviceId, movies, listOptions) {
+// Format Browsing list
+function formatList(deviceId, listItems, listOptions) {
   const options = {
     title: `Browsing ${listOptions.browseIdentifier}`,
-    totalMatchingItems: movies.length,
+    totalMatchingItems: listItems.length,
     browseIdentifier: listOptions.browseIdentifier,
     offset: listOptions.offset,
     limit: listOptions.limit,
   };
 
   const list = neeoapi.buildBrowseList(options);
-  const itemsToAdd = list.prepareItemsAccordingToOffsetAndLimit(movies);
+  const itemsToAdd = list.prepareItemsAccordingToOffsetAndLimit(listItems);
 
   console.log ("listOptions.browseIdentifier:", options.browseIdentifier);
 
   list.addListHeader(options.browseIdentifier);
-  itemsToAdd.map((movie) => {
+  itemsToAdd.map((item) => {
     const listItem = {
-      title: tools.movieTitle(movie),
-      thumbnailUri: tools.imageToHttp(deviceId, movie.thumbnail),
-      actionIdentifier: `${movie.movieid}`
+      title: tools.movieTitle(item),
+      thumbnailUri: tools.imageToHttp(deviceId, item.thumbnail),
+      actionIdentifier: `${item.movieid}`
     };
     list.addListItem(listItem);
   });
