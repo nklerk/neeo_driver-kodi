@@ -30,6 +30,12 @@ Upcomming features:
 - Browse through Music Albums, Tracks and Music video's.
 - Browse through TV Channels, Radio Channels and recordings.
 
+# Version 1.0.5
+- Added Discovery logging to troubleshoot.
+- removed IP in index.
+- restructuring code.... (Still ongoing, could take a while)
+- Starting to implement content aware buttons to behave like normal ir Remote or Key's
+
 # Version 1.0.4
 - Fixed "ENTER" -> "CURSOR ENTER"
 - Fixed Button controlls.
