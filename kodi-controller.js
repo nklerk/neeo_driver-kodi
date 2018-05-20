@@ -17,7 +17,7 @@ const COMMAND_QUEUE_TIMEOUTSHORT = 6000; 			//Maximum time for polling shutdown 
 const CONNECTED_BANNER_TIME = 10000;					//Time length the NEEO Logo and connection banner is shown in KODI.
 const MDNS_TIMEOUT = 2000;										//Duration per MDNS Discovery scan, after the timer the discovery gets cleaned and avoids memory leaks.
 const NEEO_DRIVER_SEARCH_DELAY = 8000;				//Delay before responding on a discovery request. this gives the driver the time to discover, get mac, build RPC etc..
-const PING_INTERVAL = 2000;										//Interval used to test online status of KODI.
+const PING_INTERVAL = 5000;										//Interval used to test online status of KODI.
 const PING_TIMEOUT = 1000;										//The time KODI has to respond on a application PING request, on a timeout, the KODI instance is marked as unavaileble.
 
 module.exports = {
@@ -38,7 +38,6 @@ module.exports = {
 };
 
 function ping(deviceId){
-	console.log ("Ping KODI on Application layer.")
 	if (kodiReady(deviceId)){
 		let kodi = getKodi(deviceId);
 		request.get(`http://${kodi.ip}:${kodi.port}/jsonrpc?request=%7B%22jsonrpc%22%3A%222.0%22%2C%22method%22%3A%22JSONRPC.Ping%22%2C%22params%22%3A%7B%7D%2C%22id%22%3A%22NEEOPING%22%7D`, {timeout: 1000}, function(err) {
@@ -97,16 +96,20 @@ function discover() {
 
 function addKoditoDB (discoveredData) {
 	const ip = discoveredData.addresses[0];
+	console.log ("Found Kodi with IP:", ip);
 	const reachable = true;	
 	const port = discoveredData.port;
+	console.log ("Found Kodi on port:", port);
 	const name = discoveredData.fullname.replace(/\._xbmc-jsonrpc-h\._tcp\.local/g, '');;
+	console.log ("Found Kodi on name:", name);
 	const rpc = kodirpc.build(ip,port);
 	getMacadress(ip).then(mac =>{
+		console.log ("Found Kodi with mac-address:", mac);
 		kodiDB[mac] = {name, ip, port, mac, reachable, rpc };
+		clearInterval(kodiDB[mac].ping);
 		kodiDB[mac].ping = setInterval( function(){
-			ping(mac);},
-			PING_INTERVAL
-		);
+			ping(mac);
+		}, PING_INTERVAL);
 		conectedMessage(mac);
 		
 		console.log (`Added/Updated KODI instance "${name}" to database with unique ID "${mac}".`);

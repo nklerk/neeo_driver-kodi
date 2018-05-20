@@ -1,8 +1,8 @@
 'use strict';
-const images = require('./images');
+const images = require('../images');
 const neeoapi = require('neeo-sdk');
-const kodiController = require('./kodi-controller');
-const tools = require('./tools');
+const kodiController = require('../kodi-controller');
+const tools = require('../tools');
 
 const DEFAULT_PATH = '.';
 

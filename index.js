@@ -2,7 +2,7 @@
 
 const neeoapi = require('neeo-sdk');
 const controller = require('./controller');
-const commands = require('./commands');
+const commands = require('./Commands/commands');
 
 const DISCOVERY_INSTRUCTIONS = {
   headerText: 'Discover Kodi',
@@ -20,7 +20,7 @@ neeoapi.discoverOneBrain()
     const kodiDriver = buildKodiDriver();
     
     return neeoapi.startServer({
-      brain: "10.2.1.64",
+      brain: "10.2.1.61",
       port: 63361,
       name: 'kodi-adapter-one',
       devices: [kodiDriver]
@@ -38,7 +38,7 @@ neeoapi.discoverOneBrain()
 
 
 function buildKodiDriver (){
-  let kodiDriver = neeoapi.buildDevice('Mediaplayer');
+  let kodiDriver = neeoapi.buildDevice('IP Driver');
   kodiDriver.setManufacturer('KODI');
   kodiDriver.addAdditionalSearchToken('XBMC');
   kodiDriver.setType('MEDIAPLAYER');
