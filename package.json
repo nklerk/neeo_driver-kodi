@@ -1,6 +1,6 @@
 {
 	"name": "neeo_driver-kodi",
-	"version": "1.0.3",
+	"version": "1.0.4",
 	"description": "This driver adds KODI support to NEEO.",
 	"main": "index.js",
 	"author": "Niels de Klerk",
@@ -11,7 +11,8 @@
 		"neeo-sdk": "github:NEEOInc/neeo-sdk#next",
 		"node-arp": "^1.0.6",
 		"node-kodi": "0.0.2-alpha",
-		"node-wol": "^0.1.1"
+		"node-wol": "^0.1.1",
+		"request": "^2.86.0"
 	},
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1"

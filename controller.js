@@ -6,19 +6,13 @@ const browserServiceMusic = require('./kodi-browserService-music');
 const browserServiceTVShow = require('./kodi-browserService-tvshow');
 const browserServicePVR = require('./kodi-browserService-pvr');
 const kodiController = require('./kodi-controller');
-const wol = require ('./wol');
+
 
 
 function onButtonPressed(name, deviceid) {
-  let kodiParams = kodiController.getKodi(deviceid);
   console.log ("Button pressed:", deviceid, name)
-  if (name == "POWER ON") {
-    let kodiip = kodiParams.ip || "255.255.255.255";
-    wol.powerOnKodi(deviceid, kodiip);
-  } else {
-    let cmd = commands.neeoCommands()[name];
-    kodiController.sendCommand(kodiParams, cmd.method, JSON.stringify(cmd.params));
-  }
+  const cmd = commands.neeoCommands()[name];
+  kodiController.sendCommand(deviceid, cmd.method, JSON.stringify(cmd.params));
 };
 
 // Movies

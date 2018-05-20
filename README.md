@@ -28,9 +28,23 @@ Drivers features:
 
 Upcomming features:
 - Browse through Music Albums, Tracks and Music video's.
-- Browse through TV Shows and episodes.
 - Browse through TV Channels, Radio Channels and recordings.
 
+# Version 1.0.4
+- Fixed "ENTER" -> "CURSOR ENTER"
+- Fixed Button controlls.
+- Added Connection banner in KODI.
+- Added Offline discovery.
+- Automatically reconnect.
+- Rewritten WOL, (POWER ON)
+- Automatically connect to KODI instance when POWER ON command is send. (maximum boot duration supported is 5 Minutes).
+- Manual connect to KODI instance when any command is send. (Command is not queued except for Power ON and Power Off).
+- restructured Commands.
+- Cleaned NEEO Controller.
+- Added logo_NEEO_Twitter to images.
+- Removed discovery from browserService-Movie.
+- Removed discovery from browserService-TVShow.
+- Added timer configuration in KODI Controller.
 
 # Version 1.0.3
 - Rewritten BrowserService for TV Shows

@@ -124,7 +124,6 @@ function baseListMenu(deviceId){
       browseIdentifier: "Recent Episodes"
     });
   } else {
-    kodiController.discover();
     list.addListHeader('Kodi is not connected');
     list.addListItem({
       title: "Tap to refresh",
