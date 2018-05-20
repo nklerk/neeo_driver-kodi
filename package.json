@@ -1,6 +1,6 @@
 {
 	"name": "neeo_driver-kodi",
-	"version": "1.0.5",
+	"version": "1.0.6",
 	"description": "This driver adds KODI support to NEEO.",
 	"main": "index.js",
 	"author": "Niels de Klerk",

@@ -30,6 +30,9 @@ Upcomming features:
 - Browse through Music Albums, Tracks and Music video's.
 - Browse through TV Channels, Radio Channels and recordings.
 
+# Version 1.0.6
+- Added content aware controlls. i.e. using cursor in movie to skip.
+
 # Version 1.0.5
 - Added Discovery logging to troubleshoot.
 - removed IP in index.

@@ -20,7 +20,7 @@ neeoapi.discoverOneBrain()
     const kodiDriver = buildKodiDriver();
     
     return neeoapi.startServer({
-      brain,
+      brain: "10.2.1.61",
       port: 63361,
       name: 'kodi-adapter-one',
       devices: [kodiDriver]

@@ -34,9 +34,12 @@ module.exports = {
 		playerOpen
 	},
 	kodiReady,
-	sendCommand
+	sendCommand,
+	sendContentAwareCommand
 };
 
+
+//Pinging Application to check wether the instance is availeble.
 function ping(deviceId){
 	if (kodiReady(deviceId)){
 		let kodi = getKodi(deviceId);
@@ -48,6 +51,8 @@ function ping(deviceId){
 	}
 }
 
+
+//This is called by neeo when searching for a kodi driver.
 function discovered() {
 	console.log ("Discovered devices requested by NEEO.");
 	discover();
@@ -67,11 +72,13 @@ function discovered() {
 	});
 } 
 
+// Init driver.
 function initialise(){
 	console.log ("Initialize KODI Controller.");
 	discover();
 }
 
+// Discover KODI instances.
 function discover() {
 	if (!lastDiscovery || (Date.now() - lastDiscovery > MDNS_TIMEOUT)){
 		lastDiscovery = Date.now()
@@ -94,6 +101,7 @@ function discover() {
 	}
 }
 
+//Add a found kodi to the database.
 function addKoditoDB (discoveredData) {
 	const ip = discoveredData.addresses[0];
 	console.log ("Found Kodi with IP:", ip);
@@ -111,7 +119,6 @@ function addKoditoDB (discoveredData) {
 			ping(mac);
 		}, PING_INTERVAL);
 		conectedMessage(mac);
-		
 		console.log (`Added/Updated KODI instance "${name}" to database with unique ID "${mac}".`);
 	});
 }
@@ -236,10 +243,8 @@ function playerOpen(deviceId,object){
 
 function sendCommand (deviceId,method,params,timer){
 	if (kodiReady(deviceId)){
-		if (method == "System.Shutdown"){
-			if (kodiDB[deviceId].ping){
-				clearInterval(kodiDB[deviceId].ping);
-			}
+		if (method == "System.Shutdown" && kodiDB[deviceId].ping){
+			clearInterval(kodiDB[deviceId].ping);
 		}
    	kodiDB[deviceId].rpc.rpc(method, params).catch((e)=>{
 			disconnected(deviceId,e);
@@ -255,15 +260,36 @@ function sendCommand (deviceId,method,params,timer){
 			}
 		}
 
-		if (method == "System.Shutdown"){
-			if (kodiDB[deviceId] && kodiDB[deviceId].ping){
-				clearInterval(kodiDB[deviceId].ping);
-			}
-			if (Date.now() - time < COMMAND_QUEUE_TIMEOUTSHORT){
-				setTimeout(() => {
-					sendCommand(deviceId,method,params, time);
-				}, COMMAND_QUEUE_INTERVAL);
-			}
+		if (method == "System.Shutdown" && kodiDB[deviceId] && kodiDB[deviceId].ping) {
+			clearInterval(kodiDB[deviceId].ping);
+		}
+	}
+}
+
+function sendContentAwareCommand(deviceId,method,params){
+	sendCommand(deviceId,method,params); //Is allways send, checked official kodi remote app.
+	
+	if (kodiReady(deviceId)){
+		if (method == 'Input.right' || method == 'Input.left' || method == 'Input.down' || method == 'Input.up' || method == 'Input.select'){
+			kodiDB[deviceId].rpc.gui.getProperties({"properties":["currentwindow","fullscreen"]}).then(window => {
+				console.log ('CAC window:', window);
+				if (window.currentwindow.label == 'Fullscreen video'){
+					kodiDB[deviceId].rpc.rpc("XBMC.GetInfoBooleans", `{"booleans":["VideoPlayer.HasMenu","Pvr.IsPlayingTv"]}`).then(resp => {
+						console.log ('CAC HasMenu:', resp.result[`VideoPlayer.HasMenu`]);
+						console.log ('CAC IsPlayingTv:', resp.result[`Pvr.IsPlayingTv`]);
+						if(resp.result[`Pvr.IsPlayingTv`]){
+							//no idea what to do yet.
+						}
+						if (!resp.result[`VideoPlayer.HasMenu`]){
+							if (method == 'Input.up')    { sendCommand(deviceId,'Player.Seek','{"value":"bigforward","playerid":1}'); }
+							if (method == 'Input.down')  { sendCommand(deviceId,'Player.Seek','{"value":"bigbackward","playerid":1}'); }
+							if (method == 'Input.left')  { sendCommand(deviceId,'Player.Seek','{"value":"smallbackward","playerid":1}'); }
+							if (method == 'Input.right') { sendCommand(deviceId,'Player.Seek','{"value":"smallforward","playerid":1}'); }
+							if (method == 'Input.select') { sendCommand(deviceId,'Input.ShowOSD','{}'); }
+						} //if (!resp.VideoPlayer.HasMenu){
+					})
+				} // if (window.fullscreen)else do nothing
+			})
 		}
 	}
 }

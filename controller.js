@@ -12,7 +12,11 @@ const kodiController = require('./kodi-controller');
 function onButtonPressed(name, deviceid) {
   console.log ("Button pressed:", deviceid, name)
   const cmd = commands.neeoCommands()[name];
-  kodiController.sendCommand(deviceid, cmd.method, JSON.stringify(cmd.params));
+  if (cmd.cac){
+    kodiController.sendContentAwareCommand(deviceid, cmd.method, JSON.stringify(cmd.params));
+  }else{
+    kodiController.sendCommand(deviceid, cmd.method, JSON.stringify(cmd.params));
+  }
 };
 
 // Movies
