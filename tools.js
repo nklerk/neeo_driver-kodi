@@ -6,6 +6,7 @@ module.exports = {
   movieTitle,
   episodeTitleA,
   episodeTitleB,
+  isProperMac
 };
 
 function imageToHttp (deviceID, uri) {
@@ -26,4 +27,12 @@ function episodeTitleA (item) {
 
 function episodeTitleB (item) {
   return `${item.season}-${item.episode},  ${item.title}`;
+}
+
+function isProperMac (mac){
+  if (mac.match(/^[0-9a-fA-F][0-9a-fA-F]:[0-9a-fA-F][0-9a-fA-F]:[0-9a-fA-F][0-9a-fA-F]:[0-9a-fA-F][0-9a-fA-F]:[0-9a-fA-F][0-9a-fA-F]:[0-9a-fA-F][0-9a-fA-F]$/)){
+    return true;
+  } else {
+    return false;
+  }
 }

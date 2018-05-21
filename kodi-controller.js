@@ -5,6 +5,7 @@ const kodirpc = require('./kodi-rpc');
 const images = require('./images');
 const wol = require ('./wol');
 const request = require('request');
+const tools = require('./tools');
 mdns.excludeInterface('0.0.0.0');
 
 let lastDiscovery;
@@ -19,6 +20,7 @@ const MDNS_TIMEOUT = 2000;										//Duration per MDNS Discovery scan, after th
 const NEEO_DRIVER_SEARCH_DELAY = 8000;				//Delay before responding on a discovery request. this gives the driver the time to discover, get mac, build RPC etc..
 const PING_INTERVAL = 5000;										//Interval used to test online status of KODI.
 const PING_TIMEOUT = 1000;										//The time KODI has to respond on a application PING request, on a timeout, the KODI instance is marked as unavaileble.
+const MAC_INTERVAL = 500;
 
 module.exports = {
   discovered,
@@ -82,44 +84,40 @@ function initialise(){
 function discover() {
 	if (!lastDiscovery || (Date.now() - lastDiscovery > MDNS_TIMEOUT)){
 		lastDiscovery = Date.now()
-		console.log ("Using MDNS to discover KODI instances with HTTP/RPC enabled.");
 		mdnsBrowser = mdns.createBrowser('_xbmc-jsonrpc-h._tcp');
 		mdnsBrowser.on('ready', function () {
+			console.log ("MDNS:  Start");
 			mdnsBrowser.discover();
-			console.log ("MDNS Discovery ready.");
 		});
 	
 		mdnsBrowser.on('update', function (data) {
 			addKoditoDB(data);
-			console.log ("Found a KODI instance.");
+			console.log ("MDNS:  pong");
 		});
 	
 		setTimeout(() => {
 			mdnsBrowser.stop();
-			console.log ("MDNS Discovery stopped.");
+			console.log ("MDNS:  Stop");
 		}, MDNS_TIMEOUT);
 	}
 }
 
+
 //Add a found kodi to the database.
 function addKoditoDB (discoveredData) {
 	const ip = discoveredData.addresses[0];
-	console.log ("Found Kodi with IP:", ip);
+  const port = discoveredData.port;
 	const reachable = true;	
-	const port = discoveredData.port;
-	console.log ("Found Kodi on port:", port);
 	const name = discoveredData.fullname.replace(/\._xbmc-jsonrpc-h\._tcp\.local/g, '');;
-	console.log ("Found Kodi on name:", name);
 	const rpc = kodirpc.build(ip,port);
-	getMacadress(ip).then(mac =>{
-		console.log ("Found Kodi with mac-address:", mac);
+	getMacadress(rpc).then(mac =>{
 		kodiDB[mac] = {name, ip, port, mac, reachable, rpc };
 		clearInterval(kodiDB[mac].ping);
 		kodiDB[mac].ping = setInterval( function(){
 			ping(mac);
 		}, PING_INTERVAL);
 		conectedMessage(mac);
-		console.log (`Added/Updated KODI instance "${name}" to database with unique ID "${mac}".`);
+		console.log (`KODIdb:  Found KODI instance with IP:${ip}, PORT:${port},MAC: ${mac}, NAME:${name}.`);
 	});
 }
 
@@ -142,7 +140,21 @@ function getKodiIp (deviceId){
 	}	
 }
 
-function getMacadress(ip){
+function getMacadress(rpc, tries){
+	tries = tries || 0;
+	return rpc.rpc("XBMC.GetInfoLabels", '{"labels":["Network.MacAddress"]}').then(r=>{
+		const mac = r.result["Network.MacAddress"];
+		if (!tools.isProperMac(mac) && tries < 30) {
+			return getMacadress(rpc, tries+1);
+		} else {
+			return mac;
+		}
+	})
+}
+
+
+/* function getMacadress(rpc){
+	let ip = rpc.ip
 	return new Promise(function (fulfill, reject){
 		arp.getMAC(ip, (err, mac) => {
 			if (!err) {
@@ -152,7 +164,7 @@ function getMacadress(ip){
 			}
 		});
 	});
-}
+} */
 
 function kodiReady(deviceID){
 	if (kodiDB[deviceID] && kodiDB[deviceID].reachable){
@@ -302,7 +314,7 @@ function conectedMessage (deviceId){
 		"image":images.logo_NEEO_Twitter, 
 		"displaytime":CONNECTED_BANNER_TIME
 	}
-	console.log(`Send KODI notification ${message.message}.`)
+	//console.log(`Send KODI notification ${message.message}.`)
 	kodiDB[deviceId].rpc.gui.showNotification(message).catch((e)=>{
 		disconnected(deviceId,e);
 	});
