@@ -1,10 +1,10 @@
 'use strict';
 
 const commands = require('./Commands/commands');
-const browserServiceMovies = require('./browserService/kodi-browserService-movies');
-const browserServiceMusic = require('./browserService/kodi-browserService-music');
-const browserServiceTVShow = require('./browserService/kodi-browserService-tvshow');
-const browserServicePVR = require('./browserService/kodi-browserService-pvr');
+const browserServiceMovies = require('./BrowserService/kodi-browserService-movies');
+const browserServiceMusic = require('./BrowserService/kodi-browserService-music');
+const browserServiceTVShow = require('./BrowserService/kodi-browserService-tvshow');
+const browserServicePVR = require('./BrowserService/kodi-browserService-pvr');
 const kodiController = require('./kodi-controller');
 
 
