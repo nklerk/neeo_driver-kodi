@@ -64,6 +64,7 @@ function formatList(deviceId, listItems, listOptions, title) {
 
   const list = neeoapi.buildBrowseList(options);
   const itemsToAdd = list.prepareItemsAccordingToOffsetAndLimit(listItems);
+  const kodiInstance = kodiController.getKodi(deviceId);
 
   console.log ("listOptions.browseIdentifier:", options.browseIdentifier);
 
@@ -72,7 +73,7 @@ function formatList(deviceId, listItems, listOptions, title) {
     itemsToAdd.map((item) => {
       const listItem = {
         title: item.label,
-        thumbnailUri: tools.imageToHttp(deviceId, item.thumbnail),
+        thumbnailUri: tools.imageToHttp(kodiInstance, item.thumbnail),
         browseIdentifier: `tvshowid;${item.tvshowid};${item.label}`
       };
       list.addListItem(listItem);
@@ -81,7 +82,7 @@ function formatList(deviceId, listItems, listOptions, title) {
     itemsToAdd.map((item) => {
       const listItem = {
         title: tools.episodeTitleA(item),
-        thumbnailUri: tools.imageToHttp(deviceId, item.art.thumb),
+        thumbnailUri: tools.imageToHttp(kodiInstance, item.art.thumb),
         actionIdentifier: `${item.episodeid}`
       };
       list.addListItem(listItem);
@@ -90,7 +91,7 @@ function formatList(deviceId, listItems, listOptions, title) {
     itemsToAdd.map((item) => {
       const listItem = {
         title: tools.episodeTitleB(item),
-        thumbnailUri: tools.imageToHttp(deviceId, item.art.thumb),
+        thumbnailUri: tools.imageToHttp(kodiInstance, item.art.thumb),
         actionIdentifier: `${item.episodeid}`
       };
       list.addListItem(listItem);

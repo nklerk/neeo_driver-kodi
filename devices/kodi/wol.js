@@ -1,6 +1,5 @@
 'use strict';
 const wol = require('node-wol');
-const kodiController = require('./kodi-controller');
 
 function powerOnKodi(deviceId, kodiip){
 

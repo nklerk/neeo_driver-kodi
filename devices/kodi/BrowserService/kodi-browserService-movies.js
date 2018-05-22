@@ -56,6 +56,8 @@ function formatList(deviceId, listItems, listOptions) {
 
   const list = neeoapi.buildBrowseList(options);
   const itemsToAdd = list.prepareItemsAccordingToOffsetAndLimit(listItems);
+  const kodiInstance = kodiController.getKodi(deviceId);
+  
 
   console.log ("listOptions.browseIdentifier:", options.browseIdentifier);
 
@@ -63,7 +65,7 @@ function formatList(deviceId, listItems, listOptions) {
   itemsToAdd.map((item) => {
     const listItem = {
       title: tools.movieTitle(item),
-      thumbnailUri: tools.imageToHttp(deviceId, item.thumbnail),
+      thumbnailUri: tools.imageToHttp(kodiInstance, item.thumbnail),
       actionIdentifier: `${item.movieid}`
     };
     list.addListItem(listItem);

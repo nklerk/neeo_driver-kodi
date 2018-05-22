@@ -40,6 +40,7 @@ module.exports = {
 	sendContentAwareCommand
 };
 
+//discover();
 
 //Pinging Application to check wether the instance is availeble.
 function ping(deviceId){
@@ -92,7 +93,7 @@ function discover() {
 	
 		mdnsBrowser.on('update', function (data) {
 			addKoditoDB(data);
-			console.log ("MDNS:  pong");
+			console.log ("MDNS:  responce.");
 		});
 	
 		setTimeout(() => {
@@ -153,19 +154,6 @@ function getMacadress(rpc, tries){
 }
 
 
-/* function getMacadress(rpc){
-	let ip = rpc.ip
-	return new Promise(function (fulfill, reject){
-		arp.getMAC(ip, (err, mac) => {
-			if (!err) {
-				fulfill(mac);
-			} else {
-				fulfill('00:00:00:00:00:00');
-			}
-		});
-	});
-} */
-
 function kodiReady(deviceID){
 	if (kodiDB[deviceID] && kodiDB[deviceID].reachable){
 		return true;
@@ -184,7 +172,7 @@ function getRecentlyAddedMovies(deviceId){
 			disconnected(deviceId,e);
 		});
 	} else {
-		return {}
+		return Promise.resolve({});
 	}
 }
 
@@ -196,7 +184,7 @@ function getMovies(deviceId){
 			disconnected(deviceId,e);
 		});
 	} else {
-		return {}
+		return Promise.resolve({});
 	}
 }
 
@@ -208,7 +196,7 @@ function getRecentEpisodes(deviceId){
 			disconnected(deviceId,e);
 		});
 	} else {
-		return {}
+		return Promise.resolve({});
 	}
 }
 
@@ -220,7 +208,7 @@ function getTVshowEpisodes(deviceId, showId){
 			disconnected(deviceId,e);
 		});
 	} else {
-		return {}
+		return Promise.resolve({});
 	}
 }
 
@@ -233,7 +221,7 @@ function getTVShows(deviceId){
 			disconnected(deviceId,e);
 		});
 	} else {
-		return {}
+		return Promise.resolve({});
 	}
 }
 
@@ -284,7 +272,7 @@ function sendContentAwareCommand(deviceId,method,params){
 	if (kodiReady(deviceId)){
 		if (method == 'Input.right' || method == 'Input.left' || method == 'Input.down' || method == 'Input.up' || method == 'Input.select'){
 			kodiDB[deviceId].rpc.gui.getProperties({"properties":["currentwindow","fullscreen"]}).then(window => {
-				console.log ('CAC window:', window);
+				//console.log ('CAC window:', window);
 				if (window.currentwindow.label == 'Fullscreen video'){
 					kodiDB[deviceId].rpc.rpc("XBMC.GetInfoBooleans", `{"booleans":["VideoPlayer.HasMenu","Pvr.IsPlayingTv"]}`).then(resp => {
 						console.log ('CAC HasMenu:', resp.result[`VideoPlayer.HasMenu`]);
@@ -299,12 +287,12 @@ function sendContentAwareCommand(deviceId,method,params){
 							if (method == 'Input.right') { sendCommand(deviceId,'Player.Seek','{"value":"smallforward","playerid":1}'); }
 							if (method == 'Input.select') { sendCommand(deviceId,'Input.ShowOSD','{}'); }
 						} //if (!resp.VideoPlayer.HasMenu){
-					})
+					}) // RPC XBMC.GetInfoBooleans
 				} // if (window.fullscreen)else do nothing
-			})
-		}
-	}
-}
+			}) // Get getProperties currentwindow
+		}// if input Input.right ++
+	}// If Kodi is ready
+} // function
 
 
 function conectedMessage (deviceId){
