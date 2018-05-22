@@ -87,6 +87,9 @@ This project is licensed under the MIT License
 
 # Releases
 
+## Version 1.0.9
+- added genre to movie list. just to play around, might change.
+
 ## Version 1.0.8
 - Changed code to use NEEO CLI, Remove old files first!
 - Added a debugging file for use with IDE. Debug_NEEO_DRIVER-KODI.js

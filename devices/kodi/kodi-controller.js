@@ -178,7 +178,7 @@ function getRecentlyAddedMovies(deviceId){
 
 function getMovies(deviceId){
 	if (kodiReady(deviceId)){
-		return kodiDB[deviceId].rpc.videolibrary.getMovies({"sort": {"order": "ascending", "method": "title"}}).then((x)=>{
+		return kodiDB[deviceId].rpc.videolibrary.getMovies({"properties" : ["thumbnail", "plot", "year", "genre"], "sort": {"order": "ascending", "method": "title"}}).then((x)=>{
 			return itemCheck(x, x.movies);
 		}).catch((e)=>{
 			disconnected(deviceId,e);

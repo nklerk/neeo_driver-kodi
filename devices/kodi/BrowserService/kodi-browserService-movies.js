@@ -65,6 +65,7 @@ function formatList(deviceId, listItems, listOptions) {
   itemsToAdd.map((item) => {
     const listItem = {
       title: tools.movieTitle(item),
+      label: tools.arrayToString(item.genre),
       thumbnailUri: tools.imageToHttp(kodiInstance, item.thumbnail),
       actionIdentifier: `${item.movieid}`
     };

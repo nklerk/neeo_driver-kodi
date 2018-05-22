@@ -6,7 +6,8 @@ module.exports = {
   movieTitle,
   episodeTitleA,
   episodeTitleB,
-  isProperMac
+  isProperMac,
+  arrayToString
 };
 
 function imageToHttp (kodiInstance, uri) {
@@ -32,4 +33,15 @@ function isProperMac (mac){
   } else {
     return false;
   }
+}
+
+function arrayToString (arr){
+  let ret = '';
+  for (let i in arr){
+    ret = ret + arr[i];
+    if (i+1 != arr.length){
+      ret = ret + ', ';
+    }
+  }
+  return ret;
 }
