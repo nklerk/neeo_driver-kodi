@@ -43,11 +43,21 @@ npm install
 
 ## Running the driver
 
-Use your computers console and go to the path where the files are extracted, Start the index.js file with node.
+Use your computers console and go to the path where the files are extracted, Start the driver with NPM.
 
 ```
-node index.js
+npm start
 ```
+
+## Running the driver the old way or for debugging.
+
+Use your computers console and go to the path where the files are extracted, Start the Debug_NEEO_DRIVER-KODI.js file with node.
+
+```
+node Debug_NEEO_DRIVER-KODI.js
+```
+
+or use <f5> in Visual Studio Code
 
 ## KODI Settings
 
@@ -64,9 +74,6 @@ In Kodi make sure to enable the following settings:
 * [NEEO-SDK](https://github.com/NEEOInc/neeo-sdk) - NEEO SDK github.
 * [NEEO-SDK Docs](https://neeoinc.github.io/neeo-sdk/) - Detailed SDK documentation.
 
-## Versioning
-
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags). 
 
 ## Authors
 
@@ -78,21 +85,28 @@ We use [SemVer](http://semver.org/) for versioning. For the versions available, 
 
 This project is licensed under the MIT License
 
-## Releases
+# Releases
 
-### Version 1.0.7
+## Version 1.0.8
+- Changed code to use NEEO CLI, Remove old files first!
+- Added a debugging file for use with IDE. Debug_NEEO_DRIVER-KODI.js
+- Removed Circular dependancies, Thanks to Michael Kohler
+- Fixed promise.resolve issues.
+
+
+## Version 1.0.7
 - Changed the way to obtain the MAC address.
 
-### Version 1.0.6
+## Version 1.0.6
 - Added content aware controlls. i.e. using cursor in movie to skip.
 
-### Version 1.0.5
+## Version 1.0.5
 - Added Discovery logging to troubleshoot.
 - removed IP in index.
 - restructuring code.... (Still ongoing, could take a while)
 - Starting to implement content aware buttons to behave like normal ir Remote or Key's
 
-### Version 1.0.4
+## Version 1.0.4
 - Fixed "ENTER" -> "CURSOR ENTER"
 - Fixed Button controlls.
 - Added Connection banner in KODI.
@@ -108,10 +122,10 @@ This project is licensed under the MIT License
 - Removed discovery from browserService-TVShow.
 - Added timer configuration in KODI Controller.
 
-### Version 1.0.3
+## Version 1.0.3
 - Rewritten BrowserService for TV Shows
 
-### Version 1.0.2
+## Version 1.0.2
 - Restructured discovery process.
 - Restructured controller for Kodi.
 - Rewritten BrowserService for Movies.
