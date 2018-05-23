@@ -166,7 +166,7 @@ function kodiReady(deviceID){
 //
 function getRecentlyAddedMovies(deviceId){
 	if (kodiReady(deviceId)){
-		return kodiDB[deviceId].rpc.videolibrary.getRecentlyAddedMovies({"limits": { "start" : 0, "end": 30 }}).then((x)=>{
+		return kodiDB[deviceId].rpc.videolibrary.getRecentlyAddedMovies({"properties" : ["thumbnail", "playcount", "year", "genre"],"limits": { "start" : 0, "end": 30 }}).then((x)=>{
 			return itemCheck(x, x.movies);
 		}).catch((e)=>{
 			disconnected(deviceId,e);
@@ -178,7 +178,7 @@ function getRecentlyAddedMovies(deviceId){
 
 function getMovies(deviceId){
 	if (kodiReady(deviceId)){
-		return kodiDB[deviceId].rpc.videolibrary.getMovies({"properties" : ["thumbnail", "plot", "year", "genre"], "sort": {"order": "ascending", "method": "title"}}).then((x)=>{
+		return kodiDB[deviceId].rpc.videolibrary.getMovies({"properties" : ["thumbnail", "playcount", "year", "genre"], "sort": {"order": "ascending", "method": "title"}}).then((x)=>{
 			return itemCheck(x, x.movies);
 		}).catch((e)=>{
 			disconnected(deviceId,e);

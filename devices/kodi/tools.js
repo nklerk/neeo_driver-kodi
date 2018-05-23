@@ -7,7 +7,9 @@ module.exports = {
   episodeTitleA,
   episodeTitleB,
   isProperMac,
-  arrayToString
+  arrayToString,
+  s2j,
+  j2s
 };
 
 function imageToHttp (kodiInstance, uri) {
@@ -44,4 +46,23 @@ function arrayToString (arr){
     }
   }
   return ret;
+}
+
+
+function j2s(json){
+  try {
+    return JSON.stringify(json);
+  } catch (e) {
+    console.log ('ERROR function j2s(json)', e);
+    return 'ERROR function j2s(json)';
+  }
+}
+
+function s2j(string){
+  try {
+    return JSON.parse(string);
+  } catch (e) {
+    console.log ('ERROR function s2j(string)', e);
+    return false;
+  }
 }

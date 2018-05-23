@@ -87,6 +87,9 @@ This project is licensed under the MIT License
 
 # Releases
 
+## Version 1.0.10
+- added movie filters: All, Watched, Unwatched.
+
 ## Version 1.0.9
 - added genre to movie list. just to play around, might change.
 
