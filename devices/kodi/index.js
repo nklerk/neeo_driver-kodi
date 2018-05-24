@@ -16,7 +16,7 @@ console.log ('Kodi Driver by Niels de Klerk.');
 
 
 module.exports = {
-  devices: kodi,
+  devices: [kodi],
   buildKodiDriver
 }
 
