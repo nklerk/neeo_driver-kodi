@@ -87,6 +87,15 @@ This project is licensed under the MIT License
 
 # Releases
 
+## Version 1.0.12
+- Added support fot Music albums and tracks.
+- Added Preloading Music albums.
+- Added Library cache and background fetching. (especially nice with huge libraries.)
+- Added support for Music Videos.
+
+## Version 1.0.11
+- Changed SDK-CLI Start method.
+
 ## Version 1.0.10
 - added movie filters: All, Watched, Unwatched.
 

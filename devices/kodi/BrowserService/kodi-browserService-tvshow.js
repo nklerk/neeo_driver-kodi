@@ -38,9 +38,7 @@ function browse(devideId, params) {
 
   } else if (browseIdentifier.match(/^tvshowid;[0-9]*;.*$/)) {
     const browseId = browseIdentifier.split(';');
-    console.log ("DEBUG:", browseId);
     let id = parseInt(browseId[1], 10);
-    console.log ("DEBUG:", id);
     return kodiController.library.getTVshowEpisodes(devideId, id).then((listItems)=>{
       return formatList(devideId, listItems, listOptions, browseId[2]);
     }); 
@@ -54,10 +52,11 @@ function browse(devideId, params) {
 //////////////////////////////////
 // Format Browsing list
 function formatList(deviceId, listItems, listOptions, title) {
+  let browseIdentifier = listOptions.browseIdentifier;
   const options = {
     title: `Browsing ${title}`,
     totalMatchingItems: listItems.length,
-    browseIdentifier: listOptions.browseIdentifier,
+    browseIdentifier,
     offset: listOptions.offset,
     limit: listOptions.limit,
   };
@@ -66,10 +65,10 @@ function formatList(deviceId, listItems, listOptions, title) {
   const itemsToAdd = list.prepareItemsAccordingToOffsetAndLimit(listItems);
   const kodiInstance = kodiController.getKodi(deviceId);
 
-  console.log ("listOptions.browseIdentifier:", options.browseIdentifier);
+  console.log ("listOptions.browseIdentifier:", browseIdentifier);
 
   list.addListHeader(title);
-  if (listOptions.browseIdentifier == "TV Shows"){
+  if (browseIdentifier == "TV Shows"){
     itemsToAdd.map((item) => {
       const listItem = {
         title: item.label,
@@ -78,7 +77,7 @@ function formatList(deviceId, listItems, listOptions, title) {
       };
       list.addListItem(listItem);
     });
-  } else if (listOptions.browseIdentifier == "Recent Episodes") {
+  } else if (browseIdentifier == "Recent Episodes") {
     itemsToAdd.map((item) => {
       const listItem = {
         title: tools.episodeTitleA(item),
@@ -90,7 +89,8 @@ function formatList(deviceId, listItems, listOptions, title) {
   } else {
     itemsToAdd.map((item) => {
       const listItem = {
-        title: tools.episodeTitleB(item),
+        title: item.title,
+        label: `Season: ${item.season}, Episode: ${item.episode}`,
         thumbnailUri: tools.imageToHttp(kodiInstance, item.art.thumb),
         actionIdentifier: `${item.episodeid}`
       };

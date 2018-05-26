@@ -6,73 +6,126 @@ const tools = require('../tools');
 
 const DEFAULT_PATH = '.';
 
-/* let recentMovies = {};
-let allMovies = {};
-let timestamp = {}; */
-
-let globalOptions = {
-  persistImages: false,
-  hideThumbnails: false,
-};
-
 module.exports = {
   browse,
-  setOptions,
-  startMovie,
-  sendCommand
+  action
 };
 
-/* function getRecentlyAddedMovies(kodiParams){
-  console.log ("Updated database getRecentlyAddedMovies");
-  let kodiRPC = kodirpc.build(kodiParams);
-  if (kodiRPC){
-    kodiRPC.videolibrary.getRecentlyAddedMovies({"limits": { "start" : 0, "end": 30 }}).then((x)=>{
-      recentMovies[kodiParams.mac] =  x.movies;
-      console.log ("Updated database with:", recentMovies[kodiParams.mac], "items");
+function action (deviceId, actionId){
+
+  if(actionId.indexOf('albumid') > -1) {
+    actionId = actionId.replace('albumid','');
+    kodiController.library.playerOpen(deviceId,{albumid: parseInt(actionId, 10)});
+  } else if (actionId.indexOf('songid') > -1) {
+    actionId = actionId.replace('songid','');
+    kodiController.library.playerOpen(deviceId,{songid: parseInt(actionId, 10)});
+  } else if (actionId.indexOf('musicvideoid') > -1) {
+    actionId = actionId.replace('musicvideoid','');
+    kodiController.library.playerOpen(deviceId,{musicvideoid: parseInt(actionId, 10)});
+  }
+  
+}
+
+function browse(devideId, params) {
+  const browseIdentifier = params.browseIdentifier || DEFAULT_PATH;
+  console.log ("BROWSEING", browseIdentifier);
+  const listOptions = {
+    limit: params.limit,
+    offset: params.offset,
+    browseIdentifier,
+  };
+
+  if (browseIdentifier == "Albums"){
+    return kodiController.library.getAlbums(devideId).then((listItems)=>{
+      return formatList(devideId, listItems, listOptions, browseIdentifier);
     });
+
+
+  } else if (browseIdentifier == "Music Videos") {
+    return kodiController.library.getMusicVideos(devideId).then((listItems)=>{
+      return formatList(devideId, listItems, listOptions, browseIdentifier);
+    }); 
+
+  } else if (browseIdentifier.match(/^albumid;[0-9]*;.*$/)) {
+    const browseId = browseIdentifier.split(';');
+    let id = parseInt(browseId[1], 10);
+    return kodiController.library.getAlbumTracks(devideId, id).then((listItems)=>{
+      return formatList(devideId, listItems, listOptions, browseIdentifier);
+    }); 
+    
+  //Base Menu
+  } else {
+    return baseListMenu(devideId);
   }
 }
-
-function getAllMovies(kodiParams){
-  console.log ("Updated database allMovies");
-  let kodiRPC = kodirpc.build(kodiParams);
-  if (kodiRPC){
-    kodiRPC.videolibrary.getMovies({"sort": {"order": "ascending", "method": "title"}}).then((x)=>{
-      allMovies[kodiParams.mac] =  x.movies;
-      console.log ("Updated database with:", allMovies[kodiParams.mac], "items");
-    });
-  }
-} */
-
-
-
-function startMovie (kodiParams, movieid){
-  console.log ("Now starting movie with movieid:",movieid);
-}
-
-function sendCommand (kodiParams,method,params){
-  console.log ("Sending command:",method,params);
-}
-
-
-
-function browse(kodiParams, params) {
-  console.log ("BROWSEING", params.browseIdentifier);
-  return baseListMenu(kodiParams);
-}
-
-function setOptions(params) {
-  globalOptions = Object.assign({}, globalOptions, params);
-}
-
 
 //////////////////////////////////
-// Base Movie Menu
-function baseListMenu(kodiParams){
+// Format Browsing list
+function formatList(deviceId, listItems, listOptions, title) {
 
-  console.log ("DEBUG:", kodiDiscover.getKodi(kodiParams.mac)) 
+  let browseIdentifier = listOptions.browseIdentifier;
+
   const options = {
-    title: `Movies`,
+    title: `Browsing ${title}`,
+    totalMatchingItems: listItems.length,
+    browseIdentifier,
+    offset: listOptions.offset,
+    limit: listOptions.limit,
+  };
+
+  const list = neeoapi.buildBrowseList(options);
+  const itemsToAdd = list.prepareItemsAccordingToOffsetAndLimit(listItems);
+  const kodiInstance = kodiController.getKodi(deviceId);
+
+  console.log ("browseIdentifier:", browseIdentifier);
+
+  if (browseIdentifier == "Albums"){
+    list.addListHeader(browseIdentifier);
+    itemsToAdd.map((item) => {
+      const listItem = {
+        title: item.label,
+        label: tools.arrayToString(item.artist),
+        thumbnailUri: tools.imageToHttp(kodiInstance, item.thumbnail),
+        browseIdentifier: `albumid;${item.albumid};${item.label}`
+      };
+      list.addListItem(listItem);
+    });
+  } else if (browseIdentifier == "Music Videos") {
+    list.addListHeader(browseIdentifier);
+    itemsToAdd.map((item) => {
+      const listItem = {
+        title: item.label,
+        label: tools.arrayToString(item.artist),
+        thumbnailUri: tools.imageToHttp(kodiInstance, item.thumbnail),
+        actionIdentifier: `musicvideoid${item.musicvideoid}`
+      };
+      list.addListItem(listItem);
+    });
+  } else if (browseIdentifier.match(/^albumid;[0-9]*;.*$/)) {
+    const browseId = browseIdentifier.split(';');
+    let albumid = parseInt(browseId[1], 10);
+    list.addListHeader(`${browseId[2]}`);
+    const aid = tools.j2s({albumid});
+    list.addListItem({title:'Play Album',thumbnailUri:images.icon_music, actionIdentifier:`albumid${albumid}`});
+    
+    itemsToAdd.map((item) => {
+      const listItem = {
+        title: `${item.track}, ${item.label}`,
+        label: tools.arrayToString(item.artist),
+        thumbnailUri: tools.imageToHttp(kodiInstance, item.thumbnail),
+        actionIdentifier: `songid${item.songid}`
+      };
+      list.addListItem(listItem);
+    });
+  }
+  return list;
+}
+
+
+function baseListMenu(deviceId){
+
+  const options = {
+    title: `Music`,
     totalMatchingItems: 1,
     browseIdentifier: ".",
     offset: 0,
@@ -80,7 +133,7 @@ function baseListMenu(kodiParams){
   };
   const list = neeoapi.buildBrowseList(options);
  
-  if (typeof kodiParams !== "undefined"){
+  if (kodiController.kodiReady(deviceId)){
     list.addListHeader('Music');
     list.addListItem({
       title: "Music Videos",
@@ -92,11 +145,6 @@ function baseListMenu(kodiParams){
       thumbnailUri: images.icon_music, 
       browseIdentifier: "Albums"
     });
-    list.addListItem({
-      title: "Tracks",
-      thumbnailUri: images.icon_music, 
-      browseIdentifier: "Tracks"
-    });
   } else {
     list.addListHeader('Kodi is not connected');
     list.addListItem({
@@ -105,17 +153,5 @@ function baseListMenu(kodiParams){
       browseIdentifier: "."
     });
   }
-
   return list;
-}
-
-function imageToHttp (kodiParams, uri) {
-  uri = encodeURIComponent(uri)
-  let url = `http://${kodiParams.ip}:${kodiParams.port}/image/${uri}`
-  return url;
-}
-
-function movieTitle (movie) {
-  const year = ' ('+movie.year+')' || '';
-  return movie.label+year;
 }
