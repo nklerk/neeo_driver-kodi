@@ -8,6 +8,9 @@ This will be a full featured kodi driver for NEEO. This driver is in an early al
 * Wake on Lan as POWER ON command.
 * Browse through movies and recent Movies. (add the <Directory> Movie Library as shortcut).
 * Browse through TV Shows and recent episodes. (add the <Directory> TV Shows Library as shortcut)
+* Browse through PVR TV Stations and Radio Stations. (add the <Directory> PVR Library as shortcut)
+* Browse through Music Albums, recent Albums and Music Video's. (add the <Directory> Music Library as shortcut)
+* When EPG is available the broadcasted title is shown on TV Channels.
 * All known API commands are exposed as buttons.
 * Button to update Audio Library.
 * Button to update Video Library.
@@ -16,8 +19,6 @@ This will be a full featured kodi driver for NEEO. This driver is in an early al
 ## Caviats
 
 - Kodi password must be set to nothing. Username/Password is not handled.
-- Code Spagetti. Code needs to be cleaned but should work as intended.
-- Browsing Library PVR and Music have to be fully rewritten (like i did with Movies.)
 
 ## Getting Started
 
@@ -78,12 +79,9 @@ In Kodi make sure to enable the following settings:
 ## Authors
 
 * **Niels de Klerk** - *Initial work* - [Github](https://github.com/nklerk/)
+* **michael kohler** - *Debugging and help*
 * **NEEO** - *SDK* - [Website](https://neeo.com/)
 
-
-## License
-
-This project is licensed under the MIT License
 
 # Releases
 
