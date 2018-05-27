@@ -1,16 +1,28 @@
 {
-  "name": "neeo_driver-kodi",
-  "version": "0.0.1",
-  "description": "This driver adds KODI support to NEEO.",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "Mattias, Niels",
-  "license": "ISC",
-  "dependencies": {
-    "neeo-sdk": "^0.37.2",
-	"btoa": "^1.1.2",
-    "request": "^2.81.0"
-  }
+	"name": "neeo_driver-kodi",
+	"version": "1.1.0",
+	"description": "This driver adds KODI support to NEEO.",
+	"main": "index.js",
+	"author": "Niels de Klerk",
+	"license": "MIT",
+	"private": false,
+	"dependencies": {
+		"mdns-js": "^1.0.1",
+		"neeo-sdk": "^0.50.5",
+		"node-arp": "^1.0.6",
+		"node-kodi": "0.0.2-alpha",
+		"node-wol": "^0.1.1",
+		"request": "^2.86.0"
+	},
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"server:lifx": "neeo-sdk start"
+	},
+	"engines": {
+		"node": ">=6.0.0"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/nklerk/neeo_driver-kodi.git"
+	}
 }
