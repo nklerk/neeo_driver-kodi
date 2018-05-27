@@ -34,8 +34,12 @@ module.exports = {
 		getRecentEpisodes,
 		getTVshowEpisodes,
 		getAlbums,
+		getLatestAlbums,
 		getAlbumTracks,
 		getMusicVideos,
+		getPvrRadioChannels,
+		getPvrTvChannels,
+		getPvrRecordings,
 		playerOpen
 	},
 	kodiReady,
@@ -191,8 +195,6 @@ function getRecentlyAddedMoviesRPC(deviceId){
 	return kodiDB[deviceId].rpc.videolibrary.getRecentlyAddedMovies({"properties" : ["thumbnail", "playcount", "year", "genre"],"limits": { "start" : 0, "end": 30 }}).then((x)=>{
 		kodiDB[deviceId].library.recentmovies = itemCheck(x, x.movies);
 		return kodiDB[deviceId].library.recentmovies
-	}).catch((e)=>{
-		disconnected(deviceId,e);
 	});
 }
 
@@ -215,8 +217,6 @@ function getMoviesRPC(deviceId){
 	return kodiDB[deviceId].rpc.videolibrary.getMovies({"properties" : ["thumbnail", "playcount", "year", "genre"], "sort": {"order": "ascending", "method": "title"}}).then((x)=>{
 		kodiDB[deviceId].library.movies = itemCheck(x, x.movies);
 		return kodiDB[deviceId].library.movies
-	}).catch((e)=>{
-		disconnected(deviceId,e);
 	});
 }
 
@@ -239,8 +239,6 @@ function getTVshowEpisodes(deviceId, showId){
 	if (kodiReady(deviceId)){
 		return kodiDB[deviceId].rpc.videolibrary.getEpisodes({"tvshowid":showId}).then((x)=>{
 			return itemCheck(x, x.episodes);
-		}).catch((e)=>{
-			disconnected(deviceId,e);
 		});
 	} else {
 		return Promise.resolve({});
@@ -251,8 +249,6 @@ function getTVShows(deviceId){
 	if (kodiReady(deviceId)){
 		return kodiDB[deviceId].rpc.videolibrary.getTVShows({"sort": {"order": "ascending", "method": "title"}}).then((x)=>{
 			return itemCheck(x, x.tvshows);
-		}).catch((e)=>{
-			disconnected(deviceId,e);
 		});
 	} else {
 		return Promise.resolve({});
@@ -276,17 +272,23 @@ function getAlbumsRPC(deviceId){
 		kodiDB[deviceId].library.albums = itemCheck(x, x.albums);
 		console.log('Indexed Music Albums', kodiDB[deviceId].library.albums.length);
 		return kodiDB[deviceId].library.albums;
-	}).catch((e)=>{
-		disconnected(deviceId,e);
 	});
+}
+
+function getLatestAlbums(deviceId){
+	if (kodiReady(deviceId)){
+		return kodiDB[deviceId].rpc.audiolibrary.getRecentlyAddedAlbums({"properties":["thumbnail","artist","albumlabel"],"limits":{"start":0}}).then((x)=>{
+			return itemCheck(x, x.albums);
+		});
+	} else {
+		return Promise.resolve({});
+	}
 }
 
 function getAlbumTracks(deviceId, id){
 	if (kodiReady(deviceId)){
 		return kodiDB[deviceId].rpc.audiolibrary.getSongs({"properties":["title","thumbnail","artist","album", "track"],"limits":{"start":0},"sort":{"method":"track","order":"ascending","ignorearticle":true},"filter":{"albumid":id}}).then((x)=>{
 			return itemCheck(x, x.songs);
-		}).catch((e)=>{
-			disconnected(deviceId,e);
 		});
 	} else {
 		return Promise.resolve({});
@@ -297,15 +299,52 @@ function getMusicVideos(deviceId, id){
 	if (kodiReady(deviceId)){
 		return kodiDB[deviceId].rpc.videolibrary.getMusicVideos({"properties":["title","thumbnail","artist"],"limits":{"start":0},"sort":{"method":"track","order":"ascending","ignorearticle":true}}).then((x)=>{
 			return itemCheck(x, x.musicvideos);
-		}).catch((e)=>{
-			disconnected(deviceId,e);
 		});
 	} else {
 		return Promise.resolve({});
 	}
 }
-//"method":"VideoLibrary.GetMusicVideos","id":"1527372816738","params":{"properties":["title","thumbnail","file","genre","artist","year","playcount","dateadded","streamdetails","album","resume","director","rating","fanart","studio","plot","track","tag"],"limits":{"start":0},"sort":{"method":"title","order":"ascending","ignorearticle":true}}
+//}
 
+function getPvrRadioChannels(deviceId){
+	if (kodiReady(deviceId)){
+		return kodiDB[deviceId].rpc.pvr.getChannels({"channelgroupid":"allradio","properties":["thumbnail","channeltype","hidden","locked","channel","broadcastnow"],"limits":{"start":0}}).then((x)=>{
+			return itemCheck(x, x.channels);
+		});
+	} else {
+		return Promise.resolve({});
+	}
+}
+
+function getPvrTvChannels(deviceId){
+	if (kodiReady(deviceId)){
+		return kodiDB[deviceId].rpc.pvr.getChannels({"channelgroupid":"alltv","properties":["thumbnail","channeltype","hidden","locked","channel","broadcastnow"],"limits":{"start":0}}).then((x)=>{
+			return itemCheck(x, x.channels);
+		});
+	} else {
+		return Promise.resolve({});
+	}
+}
+
+function getPvrRecordings(deviceId){
+	if (kodiReady(deviceId)){
+		return kodiDB[deviceId].rpc.rpc("PVR.GetRecordings", '{"properties":["title","starttime","endtime","art"]}').then((x)=>{
+			return itemCheck(x, x.recordings);
+		});
+	} else {
+		return Promise.resolve({});
+	}
+}
+
+
+function test(){
+	const rpc = kodirpc.build("127.0.0.1","8080");
+	rpc.audiolibrary.getRecentlyAddedAlbums
+	rpc.ping().then((x)=>{
+		console.log (x);
+	})
+	//JSONRPC.Ping
+}
 
 
 function itemCheck (x, items){
@@ -353,7 +392,7 @@ function sendContentAwareCommand(deviceId,method,params){
 	sendCommand(deviceId,method,params); //Is allways send, checked official kodi remote app.
 	
 	if (kodiReady(deviceId)){
-		if (method == 'Input.right' || method == 'Input.left' || method == 'Input.down' || method == 'Input.up' || method == 'Input.select'){
+		if (method == 'Input.right' || method == 'Input.left' || method == 'Input.down' || method == 'Input.up' || method == 'Input.select' || method == 'Player.SetSpeed'){
 			kodiDB[deviceId].rpc.gui.getProperties({"properties":["currentwindow","fullscreen"]}).then(window => {
 				//console.log ('CAC window:', window);
 				if (window.currentwindow.label == 'Fullscreen video'){
@@ -361,7 +400,8 @@ function sendContentAwareCommand(deviceId,method,params){
 						console.log ('CAC HasMenu:', resp.result[`VideoPlayer.HasMenu`]);
 						console.log ('CAC IsPlayingTv:', resp.result[`Pvr.IsPlayingTv`]);
 						if(resp.result[`Pvr.IsPlayingTv`]){
-							//no idea what to do yet.
+							if (method == 'Player.SetSpeed' && params == '{"playerid":1,"speed":-2}'){ sendCommand(deviceId,'Input.ExecuteAction','{ "action": "channeldown"}'); } 
+							if (method == 'Player.SetSpeed' && params == '{"playerid":1,"speed":2}'){ sendCommand(deviceId,'Input.ExecuteAction','{ "action": "channelup"}');	} 
 						}
 						if (!resp.result[`VideoPlayer.HasMenu`]){
 							if (method == 'Input.up')    { sendCommand(deviceId,'Player.Seek','{"value":"bigforward","playerid":1}'); }
@@ -391,18 +431,12 @@ function conectedMessage (deviceId){
 	});
 }
 
-function test(){
-	const rpc = kodirpc.build("127.0.0.1","8080");
-	rpc.videolibrary.getMusicVideos
-	rpc.ping().then((x)=>{
-		console.log (x);
-	})
-	//JSONRPC.Ping
-}
+
 
 function disconnected(deviceId, error){
 	console.log (`Got an error from KODI with ID "${deviceId}".`);
 	console.log (error);
 	console.log (`Marking KODI with ID "${deviceId}" as offline.`);
+	clearInterval(kodiDB[deviceId].ping);
 	kodiDB[deviceId].reachable = false;	
 }

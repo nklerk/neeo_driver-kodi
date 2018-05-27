@@ -6,73 +6,114 @@ const tools = require('../tools');
 
 const DEFAULT_PATH = '.';
 
-/* let recentMovies = {};
-let allMovies = {};
-let timestamp = {}; */
-
-let globalOptions = {
-  persistImages: false,
-  hideThumbnails: false,
-};
-
 module.exports = {
   browse,
-  setOptions,
-  startMovie,
-  sendCommand
+  action
 };
 
-/* function getRecentlyAddedMovies(kodiParams){
-  console.log ("Updated database getRecentlyAddedMovies");
-  let kodiRPC = kodirpc.build(kodiParams);
-  if (kodiRPC){
-    kodiRPC.videolibrary.getRecentlyAddedMovies({"limits": { "start" : 0, "end": 30 }}).then((x)=>{
-      recentMovies[kodiParams.mac] =  x.movies;
-      console.log ("Updated database with:", recentMovies[kodiParams.mac], "items");
-    });
+function action (deviceId, actionId){
+
+  if(actionId.indexOf('channelid') > -1) {
+    actionId = actionId.replace('channelid','');
+    kodiController.library.playerOpen(deviceId,{channelid: parseInt(actionId, 10)});
+  } else if (actionId.indexOf('songid') > -1) {
+    actionId = actionId.replace('songid','');
+    kodiController.library.playerOpen(deviceId,{songid: parseInt(actionId, 10)});
+  } else if (actionId.indexOf('musicvideoid') > -1) {
+    actionId = actionId.replace('musicvideoid','');
+    kodiController.library.playerOpen(deviceId,{musicvideoid: parseInt(actionId, 10)});
   }
+  
 }
 
-function getAllMovies(kodiParams){
-  console.log ("Updated database allMovies");
-  let kodiRPC = kodirpc.build(kodiParams);
-  if (kodiRPC){
-    kodiRPC.videolibrary.getMovies({"sort": {"order": "ascending", "method": "title"}}).then((x)=>{
-      allMovies[kodiParams.mac] =  x.movies;
-      console.log ("Updated database with:", allMovies[kodiParams.mac], "items");
+function browse(devideId, params) {
+  const browseIdentifier = params.browseIdentifier || DEFAULT_PATH;
+  console.log ("BROWSEING", browseIdentifier);
+  const listOptions = {
+    limit: params.limit,
+    offset: params.offset,
+    browseIdentifier,
+  };
+
+  if (browseIdentifier == "TV Channels"){
+    return kodiController.library.getPvrTvChannels(devideId).then((listItems)=>{
+      return formatList(devideId, listItems, listOptions, browseIdentifier);
     });
+
+
+  } else if (browseIdentifier == "Radio Stations") {
+    return kodiController.library.getPvrRadioChannels(devideId).then((listItems)=>{
+      return formatList(devideId, listItems, listOptions, browseIdentifier);
+    }); 
+
+
+  } else if (browseIdentifier == "Recordings") {
+    return kodiController.library.getPvrRecordings(devideId).then((listItems)=>{
+      return formatList(devideId, listItems, listOptions, browseIdentifier);
+    }); 
+
+
+  } else {
+    return baseListMenu(devideId);
   }
-} */
-
-
-
-function startMovie (kodiParams, movieid){
-  console.log ("Now starting movie with movieid:",movieid);
-}
-
-function sendCommand (kodiParams,method,params){
-  console.log ("Sending command:",method,params);
-}
-
-
-
-function browse(kodiParams, params) {
-  console.log ("BROWSEING", params.browseIdentifier);
-  return baseListMenu(kodiParams);
-}
-
-function setOptions(params) {
-  globalOptions = Object.assign({}, globalOptions, params);
 }
 
 
 //////////////////////////////////
-// Base Movie Menu
-function baseListMenu(kodiParams){
+// Format Browsing list
+function formatList(deviceId, listItems, listOptions, title) {
 
-  console.log ("DEBUG:", kodiDiscover.getKodi(kodiParams.mac)) 
+  let browseIdentifier = listOptions.browseIdentifier;
+
   const options = {
-    title: `Movies`,
+    title: `Browsing ${title}`,
+    totalMatchingItems: listItems.length,
+    browseIdentifier,
+    offset: listOptions.offset,
+    limit: listOptions.limit,
+  };
+
+  const list = neeoapi.buildBrowseList(options);
+  const itemsToAdd = list.prepareItemsAccordingToOffsetAndLimit(listItems);
+  const kodiInstance = kodiController.getKodi(deviceId);
+
+  console.log ("browseIdentifier:", browseIdentifier);
+
+  if (browseIdentifier == "TV Channels" || browseIdentifier == "Radio Stations"){
+    list.addListHeader(browseIdentifier);
+    itemsToAdd.map((item) => {
+      if (item.hidden == false){
+        let broadcastnowTitle = "";
+        if (typeof item.broadcastnow != "undefined" && typeof item.broadcastnow.title != "undefined"){
+          broadcastnowTitle = item.broadcastnow.title;
+        }
+        const listItem = {
+          title: item.label,
+          label: broadcastnowTitle,
+          thumbnailUri: tools.imageToHttp(kodiInstance, item.thumbnail),
+          actionIdentifier: `channelid${item.channelid}`
+        };
+        list.addListItem(listItem);
+      }
+    });
+  } else if (browseIdentifier == "Recordings"){
+    list.addListHeader(browseIdentifier);
+    const listItem = {
+      title: item.label,
+      label: broadcastnowTitle,
+      thumbnailUri: tools.imageToHttp(kodiInstance, item.thumbnail),
+      actionIdentifier: `channelid${item.channelid}`
+    };
+    list.addListItem(listItem);
+  }
+  return list;
+}
+
+
+function baseListMenu(deviceId){
+
+  const options = {
+    title: `Music`,
     totalMatchingItems: 1,
     browseIdentifier: ".",
     offset: 0,
@@ -80,7 +121,7 @@ function baseListMenu(kodiParams){
   };
   const list = neeoapi.buildBrowseList(options);
  
-  if (typeof kodiParams !== "undefined"){
+  if (kodiController.kodiReady(deviceId)){
     list.addListHeader('PVR');
     list.addListItem({
       title: "TV Channels",
@@ -92,11 +133,11 @@ function baseListMenu(kodiParams){
       thumbnailUri: images.icon_pvr, 
       browseIdentifier: "Radio Stations"
     });
-    list.addListItem({
+    /* list.addListItem({
       title: "Recordings",
       thumbnailUri: images.icon_pvr, 
       browseIdentifier: "Recordings"
-    });
+    }); */
   } else {
     list.addListHeader('Kodi is not connected');
     list.addListItem({
@@ -105,17 +146,5 @@ function baseListMenu(kodiParams){
       browseIdentifier: "."
     });
   }
-
   return list;
-}
-
-function imageToHttp (kodiParams, uri) {
-  uri = encodeURIComponent(uri)
-  let url = `http://${kodiParams.ip}:${kodiParams.port}/image/${uri}`
-  return url;
-}
-
-function movieTitle (movie) {
-  const year = ' ('+movie.year+')' || '';
-  return movie.label+year;
 }

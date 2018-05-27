@@ -87,6 +87,15 @@ This project is licensed under the MIT License
 
 # Releases
 
+## Version 1.1.0
+As all basic features are now working i've updated to 1.1.0.
+- Fixed an endless discovery bug when a device got offline
+- Fixed a WOL bug.
+- Added PVR TV stations. Shows a list of TV channels and if EPG info is availeble also the current broadcast title.
+- Added PVR Radio stations. Shows a list of Radio channels and if EPG info is availeble also the current broadcast title.
+- Added contentaware buttons of Channel UP and Channel Down.
+- Added Recent Albums
+
 ## Version 1.0.12
 - Added support fot Music albums and tracks.
 - Added Preloading Music albums.

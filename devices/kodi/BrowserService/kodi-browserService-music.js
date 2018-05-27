@@ -41,12 +41,17 @@ function browse(devideId, params) {
     });
 
 
+  } else if (browseIdentifier == "Recent albums") {
+    return kodiController.library.getLatestAlbums(devideId).then((listItems)=>{
+      return formatList(devideId, listItems, listOptions, browseIdentifier);
+    }); 
+    
   } else if (browseIdentifier == "Music Videos") {
     return kodiController.library.getMusicVideos(devideId).then((listItems)=>{
       return formatList(devideId, listItems, listOptions, browseIdentifier);
     }); 
-
-  } else if (browseIdentifier.match(/^albumid;[0-9]*;.*$/)) {
+    
+  }else if (browseIdentifier.match(/^albumid;[0-9]*;.*$/)) {
     const browseId = browseIdentifier.split(';');
     let id = parseInt(browseId[1], 10);
     return kodiController.library.getAlbumTracks(devideId, id).then((listItems)=>{
@@ -79,7 +84,7 @@ function formatList(deviceId, listItems, listOptions, title) {
 
   console.log ("browseIdentifier:", browseIdentifier);
 
-  if (browseIdentifier == "Albums"){
+  if (browseIdentifier == "Albums" || browseIdentifier == "Recent albums"){
     list.addListHeader(browseIdentifier);
     itemsToAdd.map((item) => {
       const listItem = {
@@ -144,6 +149,11 @@ function baseListMenu(deviceId){
       title: "Albums",
       thumbnailUri: images.icon_music, 
       browseIdentifier: "Albums"
+    });
+    list.addListItem({
+      title: "Recent albums",
+      thumbnailUri: images.icon_music, 
+      browseIdentifier: "Recent albums"
     });
   } else {
     list.addListHeader('Kodi is not connected');
