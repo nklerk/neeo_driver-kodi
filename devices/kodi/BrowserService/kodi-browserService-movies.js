@@ -52,7 +52,7 @@ function formatList(deviceId, listItems, listOptions) {
     title: `Browsing ${browseIdentifier}`,
     totalMatchingItems: listItems.length,
     browseIdentifier,
-    offset: listOptions.offset,
+    offset: listOptions.offset || 0,
     limit: listOptions.limit,
   };
 
@@ -64,17 +64,23 @@ function formatList(deviceId, listItems, listOptions) {
   console.log ("browseIdentifier:", browseIdentifier);
 
 
-  if (browseIdentifier == 'Movies'){
-    list.addListItem({title: 'Filter', label: 'List All', thumbnailUri: images.icon_filter, browseIdentifier: 'Unwatched movies'});
+  //top menu part.
+  if ( options.offset == 0 ) {
+    list.addListHeader(`${browseIdentifier}`);
+    if ( browseIdentifier == 'Movies' ){
+      list.addListItem({title: 'Filter', label: 'List All', thumbnailUri: images.icon_filter, browseIdentifier: 'Unwatched movies'});
 
-  } else if(browseIdentifier == 'Unwatched movies'){
-    list.addListItem({title: 'Filter', label: 'List Unwatched', thumbnailUri: images.icon_filter, browseIdentifier: 'Watched movies'});
+    } else if( browseIdentifier == 'Unwatched movies' ){
+      list.addListItem({title: 'Filter', label: 'List Unwatched', thumbnailUri: images.icon_filter, browseIdentifier: 'Watched movies'});
 
-  } else if (browseIdentifier == 'Watched movies'){
-    list.addListItem({title: 'Filter', label: 'List Watched', thumbnailUri: images.icon_filter, browseIdentifier: 'Movies'});
+    } else if ( browseIdentifier == 'Watched movies' ){
+      list.addListItem({title: 'Filter', label: 'List Watched', thumbnailUri: images.icon_filter, browseIdentifier: 'Movies'});
+    }
+    
   }
 
-  list.addListHeader(`${browseIdentifier}`);
+
+  
   itemsToAdd.map((item) => {
     if (browseIdentifier == 'Movies' || browseIdentifier == "Recent Movies" || (browseIdentifier == 'Unwatched movies' && item.playcount == 0) ||  (browseIdentifier == 'Watched movies' && item.playcount != 0)){
       const listItem = {

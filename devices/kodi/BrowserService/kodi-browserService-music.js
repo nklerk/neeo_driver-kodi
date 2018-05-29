@@ -74,7 +74,7 @@ function formatList(deviceId, listItems, listOptions, title) {
     title: `Browsing ${title}`,
     totalMatchingItems: listItems.length,
     browseIdentifier,
-    offset: listOptions.offset,
+    offset: listOptions.offset || 0,
     limit: listOptions.limit,
   };
 
@@ -84,8 +84,11 @@ function formatList(deviceId, listItems, listOptions, title) {
 
   console.log ("browseIdentifier:", browseIdentifier);
 
+
   if (browseIdentifier == "Albums" || browseIdentifier == "Recent albums"){
-    list.addListHeader(browseIdentifier);
+    if (options.offset == 0){
+      list.addListHeader(browseIdentifier);
+    }
     itemsToAdd.map((item) => {
       const listItem = {
         title: item.label,
@@ -96,7 +99,9 @@ function formatList(deviceId, listItems, listOptions, title) {
       list.addListItem(listItem);
     });
   } else if (browseIdentifier == "Music Videos") {
-    list.addListHeader(browseIdentifier);
+    if (options.offset == 0){
+      list.addListHeader(browseIdentifier);
+    }
     itemsToAdd.map((item) => {
       const listItem = {
         title: item.label,
@@ -109,10 +114,10 @@ function formatList(deviceId, listItems, listOptions, title) {
   } else if (browseIdentifier.match(/^albumid;[0-9]*;.*$/)) {
     const browseId = browseIdentifier.split(';');
     let albumid = parseInt(browseId[1], 10);
-    list.addListHeader(`${browseId[2]}`);
-    const aid = tools.j2s({albumid});
-    list.addListItem({title:'Play Album',thumbnailUri:images.icon_music, actionIdentifier:`albumid${albumid}`});
-    
+    if (options.offset == 0){
+      list.addListHeader(`${browseId[2]}`);
+      list.addListItem({title:'Play Album',thumbnailUri:images.icon_music, actionIdentifier:`albumid${albumid}`});
+    }
     itemsToAdd.map((item) => {
       const listItem = {
         title: `${item.track}, ${item.label}`,
