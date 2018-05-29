@@ -52,7 +52,7 @@ npm start
 
 ## Running the driver the old way or for debugging.
 
-Use your computers console and go to the path where the files are extracted, Start the Debug_NEEO_DRIVER-KODI.js file with node.
+Use your computers console and go to the path where the files are extracted, Edit the file Debug_NEEO_DRIVER-KODI.js to your pesonal setup, then Start the Debug_NEEO_DRIVER-KODI.js file with node.
 
 ```
 node Debug_NEEO_DRIVER-KODI.js
