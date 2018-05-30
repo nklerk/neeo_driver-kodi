@@ -2,6 +2,7 @@
 const kodiController = require('./kodi-controller');
 
 module.exports = {
+  itemCheck,
   imageToHttp,
   movieTitle,
   episodeTitleA,
@@ -11,6 +12,15 @@ module.exports = {
   s2j,
   j2s
 };
+
+function itemCheck (x, items){
+	if (x.limits.total > 0) {
+		return items;
+	} else {
+		return [];
+	}
+}
+
 
 function imageToHttp (kodiInstance, uri) {
   return `http://${kodiInstance.ip}:${kodiInstance.port}/image/`+encodeURIComponent(uri);

@@ -18,23 +18,31 @@ function action (deviceId, movieId){
 
 function browse(devideId, params) {
   let browseIdentifier = params.browseIdentifier || DEFAULT_PATH;
-  
-  console.log ("BROWSEING", browseIdentifier);
   const listOptions = {
-    limit: params.limit,
-    offset: params.offset,
+    limit: params.limit || 64,
+    offset: params.offset || 0,
     browseIdentifier
   };
 
+
+console.log ("listOptions.offset", listOptions.offset);
+
   //If Movies
   if (browseIdentifier == "Movies" || browseIdentifier == "Unwatched movies" || browseIdentifier == "Watched movies"){
-    return kodiController.library.getMovies(devideId).then((listItems)=>{
+    if (listOptions.offset > 0){
+      listOptions.offset = listOptions.offset -1; //Fix because 1 item is added to the top for filtering
+    }
+    return kodiController.library.getMovies(devideId, listOptions.offset, listOptions.limit).then((x)=>{
+      const listItems = tools.itemCheck(x, x.movies);
+      listOptions.total = x.limits.total
       return formatList(devideId, listItems, listOptions);
     });
 
   //If Recent Movies
   } else if (browseIdentifier == "Recent Movies") {
-    return kodiController.library.getRecentlyAddedMovies(devideId).then((listItems)=>{
+    return kodiController.library.getRecentlyAddedMovies(devideId).then((x)=>{
+      const listItems = tools.itemCheck(x, x.movies);
+      listOptions.total = 30
       return formatList(devideId, listItems, listOptions);
     }); 
  
@@ -44,20 +52,23 @@ function browse(devideId, params) {
   }
 }
 
+
+
 //////////////////////////////////
 // Format Browsing list
 function formatList(deviceId, listItems, listOptions) {
   let browseIdentifier = listOptions.browseIdentifier;
   const options = {
     title: `Browsing ${browseIdentifier}`,
-    totalMatchingItems: listItems.length,
+    totalMatchingItems: listOptions.total,
     browseIdentifier,
-    offset: listOptions.offset || 0,
+    offset: listOptions.offset,
     limit: listOptions.limit,
   };
 
   const list = neeoapi.buildBrowseList(options);
-  const itemsToAdd = list.prepareItemsAccordingToOffsetAndLimit(listItems);
+  //const itemsToAdd = list.prepareItemsAccordingToOffsetAndLimit(listItems);
+  const itemsToAdd = listItems;
   const kodiInstance = kodiController.getKodi(deviceId);
   
 
@@ -66,7 +77,6 @@ function formatList(deviceId, listItems, listOptions) {
 
   //top menu part.
   if ( options.offset == 0 ) {
-    list.addListHeader(`${browseIdentifier}`);
     if ( browseIdentifier == 'Movies' ){
       list.addListItem({title: 'Filter', label: 'List All', thumbnailUri: images.icon_filter, browseIdentifier: 'Unwatched movies'});
 
@@ -76,7 +86,6 @@ function formatList(deviceId, listItems, listOptions) {
     } else if ( browseIdentifier == 'Watched movies' ){
       list.addListItem({title: 'Filter', label: 'List Watched', thumbnailUri: images.icon_filter, browseIdentifier: 'Movies'});
     }
-    
   }
 
 
@@ -105,7 +114,7 @@ function baseListMenu(deviceId){
     totalMatchingItems: 2,
     browseIdentifier: ".",
     offset: 0,
-    limit: 10
+    limit: 2
   };
   const list = neeoapi.buildBrowseList(options);
  

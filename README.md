@@ -85,6 +85,11 @@ In Kodi make sure to enable the following settings:
 
 
 # Releases
+## Version 1.1.3
+- Reworked the way itemlists are build. now steps of 64 items are fetched.
+- Code cleaning.
+- Fixed images.
+
 
 ## Version 1.1.2
 - fixed reacurring filter issue

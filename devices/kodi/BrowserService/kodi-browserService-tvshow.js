@@ -20,26 +20,32 @@ function browse(devideId, params) {
   const browseIdentifier = params.browseIdentifier || DEFAULT_PATH;
   console.log ("BROWSEING", browseIdentifier);
   const listOptions = {
-    limit: params.limit,
-    offset: params.offset,
-    browseIdentifier,
+    limit: params.limit || 64,
+    offset: params.offset || 0,
+    browseIdentifier
   };
 
   if (browseIdentifier == "TV Shows"){
-    return kodiController.library.getTVShows(devideId).then((listItems)=>{
+    return kodiController.library.getTVShows(devideId, listOptions.offset, listOptions.limit).then((x)=>{
+      const listItems = tools.itemCheck(x, x.tvshows);
+      listOptions.total = x.limits.total
       return formatList(devideId, listItems, listOptions, "TV Shows");
     });
 
 
   } else if (browseIdentifier == "Recent Episodes") {
-    return kodiController.library.getRecentEpisodes(devideId).then((listItems)=>{
+    return kodiController.library.getRecentEpisodes(devideId, listOptions.offset, listOptions.limit).then((x)=>{
+      const listItems = tools.itemCheck(x, x.episodes);
+      listOptions.total = x.limits.total
       return formatList(devideId, listItems, listOptions, "Recent Episodes");
     }); 
 
   } else if (browseIdentifier.match(/^tvshowid;[0-9]*;.*$/)) {
     const browseId = browseIdentifier.split(';');
     let id = parseInt(browseId[1], 10);
-    return kodiController.library.getTVshowEpisodes(devideId, id).then((listItems)=>{
+    return kodiController.library.getTVshowEpisodes(devideId, id, listOptions.offset, listOptions.limit).then((x)=>{
+      const listItems = tools.itemCheck(x, x.episodes);
+      listOptions.total = x.limits.total
       return formatList(devideId, listItems, listOptions, browseId[2]);
     }); 
     
@@ -67,7 +73,6 @@ function formatList(deviceId, listItems, listOptions, title) {
 
   console.log ("listOptions.browseIdentifier:", browseIdentifier);
 
-  list.addListHeader(title);
   if (browseIdentifier == "TV Shows"){
     itemsToAdd.map((item) => {
       const listItem = {
@@ -105,10 +110,10 @@ function baseListMenu(deviceId){
 
   const options = {
     title: `TV Shows`,
-    totalMatchingItems: 1,
+    totalMatchingItems: 2,
     browseIdentifier: ".",
     offset: 0,
-    limit: 10
+    limit: 2
   };
   const list = neeoapi.buildBrowseList(options);
  

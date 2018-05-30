@@ -30,25 +30,31 @@ function browse(devideId, params) {
   const browseIdentifier = params.browseIdentifier || DEFAULT_PATH;
   console.log ("BROWSEING", browseIdentifier);
   const listOptions = {
-    limit: params.limit,
-    offset: params.offset,
-    browseIdentifier,
+    limit: params.limit || 64,
+    offset: params.offset || 0,
+    browseIdentifier
   };
 
   if (browseIdentifier == "TV Channels"){
-    return kodiController.library.getPvrTvChannels(devideId).then((listItems)=>{
+    return kodiController.library.getPvrTvChannels(devideId, listOptions.offset, listOptions.limit).then((x)=>{
+      const listItems = tools.itemCheck(x, x.channels);
+      listOptions.total = x.limits.total
       return formatList(devideId, listItems, listOptions, browseIdentifier);
     });
 
 
   } else if (browseIdentifier == "Radio Stations") {
-    return kodiController.library.getPvrRadioChannels(devideId).then((listItems)=>{
+    return kodiController.library.getPvrRadioChannels(devideId, listOptions.offset, listOptions.limit).then((x)=>{
+      const listItems = tools.itemCheck(x, x.channels);
+      listOptions.total = x.limits.total
       return formatList(devideId, listItems, listOptions, browseIdentifier);
     }); 
 
 
   } else if (browseIdentifier == "Recordings") {
-    return kodiController.library.getPvrRecordings(devideId).then((listItems)=>{
+    return kodiController.library.getPvrRecordings(devideId, listOptions.offset, listOptions.limit).then((x)=>{
+      const listItems = tools.itemCheck(x, x.recordings);
+      listOptions.total = x.limits.total
       return formatList(devideId, listItems, listOptions, browseIdentifier);
     }); 
 
@@ -80,7 +86,6 @@ function formatList(deviceId, listItems, listOptions, title) {
   console.log ("browseIdentifier:", browseIdentifier);
 
   if (browseIdentifier == "TV Channels" || browseIdentifier == "Radio Stations"){
-    list.addListHeader(browseIdentifier);
     itemsToAdd.map((item) => {
       if (item.hidden == false){
         let broadcastnowTitle = "";
@@ -97,7 +102,6 @@ function formatList(deviceId, listItems, listOptions, title) {
       }
     });
   } else if (browseIdentifier == "Recordings"){
-    list.addListHeader(browseIdentifier);
     const listItem = {
       title: item.label,
       label: broadcastnowTitle,
@@ -114,10 +118,10 @@ function baseListMenu(deviceId){
 
   const options = {
     title: `Music`,
-    totalMatchingItems: 1,
+    totalMatchingItems: 2,
     browseIdentifier: ".",
     offset: 0,
-    limit: 10
+    limit: 2
   };
   const list = neeoapi.buildBrowseList(options);
  

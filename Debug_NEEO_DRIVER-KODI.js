@@ -12,7 +12,7 @@ neeoapi.startServer({
       devices: [test]
   })
   .then(() => {
-    console.log('# READY! use the NEEO app to search for "KODI Mediaplayer remote".');
+    console.log('# READY! use the NEEO app to search for "KODI IP Driver".');
   })
   .catch((err) => {
     console.error('ERROR!', err);
