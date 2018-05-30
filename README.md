@@ -19,6 +19,7 @@ This will be a full featured kodi driver for NEEO. This driver is in an early al
 ## Caviats
 
 - Kodi password must be set to nothing. Username/Password is not handled.
+- Kodi 17.x on Android is not supported because it lacks Zeroconf, Use Kodi 18 instead.
 
 ## Getting Started
 
@@ -52,7 +53,7 @@ npm start
 
 ## Running the driver the old way or for debugging.
 
-Use your computers console and go to the path where the files are extracted, Start the Debug_NEEO_DRIVER-KODI.js file with node.
+Use your computers console and go to the path where the files are extracted, Edit the file Debug_NEEO_DRIVER-KODI.js to your pesonal setup, then Start the Debug_NEEO_DRIVER-KODI.js file with node.
 
 ```
 node Debug_NEEO_DRIVER-KODI.js
@@ -84,6 +85,12 @@ In Kodi make sure to enable the following settings:
 
 
 # Releases
+
+## Version 1.1.2
+- fixed reacurring filter issue
+
+## Version 1.1.1
+- NPM start fix
 
 ## Version 1.1.0
 As all basic features are now working i've updated to 1.1.0.
