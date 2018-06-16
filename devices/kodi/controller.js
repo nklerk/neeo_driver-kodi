@@ -7,52 +7,50 @@ const browserServiceTVShow = require('./BrowserService/kodi-browserService-tvsho
 const browserServicePVR = require('./BrowserService/kodi-browserService-pvr');
 const kodiController = require('./kodi-controller');
 
-
-
 function onButtonPressed(name, deviceid) {
-  console.log ("Button pressed:", deviceid, name)
+  console.log('Button pressed:', deviceid, name);
   const cmd = commands.neeoCommands()[name];
-  if (cmd.cac){
+  if (cmd.cac) {
     kodiController.sendContentAwareCommand(deviceid, cmd.method, JSON.stringify(cmd.params));
-  }else{
+  } else {
     kodiController.sendCommand(deviceid, cmd.method, JSON.stringify(cmd.params));
   }
-};
+}
 
 // Movies
 function movieLibraryGetter(deviceId, params) {
-  return browserServiceMovies.browse(deviceId, params)
+  return browserServiceMovies.browse(deviceId, params);
 }
 
 function movieLibraryAction(deviceId, params) {
-  browserServiceMovies.action(deviceId, params.actionIdentifier)
+  browserServiceMovies.action(deviceId, params.actionIdentifier);
 }
 
 //Music
 function musicLibraryGetter(deviceId, params) {
-  return browserServiceMusic.browse(deviceId, params)
+  return browserServiceMusic.browse(deviceId, params);
 }
 
 function musicLibraryAction(deviceId, params) {
-  browserServiceMusic.action(deviceId, params.actionIdentifier)
+  browserServiceMusic.action(deviceId, params.actionIdentifier);
 }
 
 //TV Show
 function tvshowLibraryGetter(deviceId, params) {
-  return browserServiceTVShow.browse(deviceId, params)
+  return browserServiceTVShow.browse(deviceId, params);
 }
 
 function tvshowLibraryAction(deviceId, params) {
-  browserServiceTVShow.action(deviceId, params.actionIdentifier)
+  browserServiceTVShow.action(deviceId, params.actionIdentifier);
 }
 
 // TV
 function pvrLibraryGetter(deviceId, params) {
-  return browserServicePVR.browse(deviceId, params)
+  return browserServicePVR.browse(deviceId, params);
 }
 
 function pvrLibraryAction(deviceId, params) {
-  browserServicePVR.action(deviceId, params.actionIdentifier)
+  browserServicePVR.action(deviceId, params.actionIdentifier);
 }
 
 //Discovery
@@ -88,5 +86,5 @@ module.exports = {
   },
   discoverDevices,
   registerStateUpdateCallback,
-  initialise
+  initialise,
 };

@@ -12,11 +12,13 @@
 		"node-arp": "^1.0.6",
 		"node-kodi": "0.0.2-alpha",
 		"node-wol": "^0.1.1",
+		"prettier": "^1.13.5",
 		"request": "^2.86.0"
 	},
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
-		"start": "neeo-sdk start"
+		"start": "neeo-sdk start",
+		"fmt": "prettier --config ./.prettierrc --write \"**/*.js\""
 	},
 	"engines": {
 		"node": ">=6.0.0"

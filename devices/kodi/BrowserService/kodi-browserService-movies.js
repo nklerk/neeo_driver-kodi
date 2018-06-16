@@ -8,37 +8,37 @@ const DEFAULT_PATH = '.';
 
 module.exports = {
   browse,
-  action
+  action,
 };
 
-function action (deviceId, movieId){
-  console.log ("Now starting movie with movieid:",movieId);
-  kodiController.library.playerOpen(deviceId, {movieid: parseInt(movieId, 10)});
+function action(deviceId, movieId) {
+  console.log('Now starting movie with movieid:', movieId);
+  kodiController.library.playerOpen(deviceId, { movieid: parseInt(movieId, 10) });
 }
 
 function browse(devideId, params) {
   let browseIdentifier = params.browseIdentifier || DEFAULT_PATH;
-  
-  console.log ("BROWSEING", browseIdentifier);
+
+  console.log('BROWSEING', browseIdentifier);
   const listOptions = {
     limit: params.limit,
     offset: params.offset,
-    browseIdentifier
+    browseIdentifier,
   };
 
   //If Movies
-  if (browseIdentifier == "Movies" || browseIdentifier == "Unwatched movies" || browseIdentifier == "Watched movies"){
-    return kodiController.library.getMovies(devideId).then((listItems)=>{
+  if (browseIdentifier == 'Movies' || browseIdentifier == 'Unwatched movies' || browseIdentifier == 'Watched movies') {
+    return kodiController.library.getMovies(devideId).then(listItems => {
       return formatList(devideId, listItems, listOptions);
     });
 
-  //If Recent Movies
-  } else if (browseIdentifier == "Recent Movies") {
-    return kodiController.library.getRecentlyAddedMovies(devideId).then((listItems)=>{
+    //If Recent Movies
+  } else if (browseIdentifier == 'Recent Movies') {
+    return kodiController.library.getRecentlyAddedMovies(devideId).then(listItems => {
       return formatList(devideId, listItems, listOptions);
-    }); 
- 
-  //Base Menu
+    });
+
+    //Base Menu
   } else {
     return baseListMenu(devideId);
   }
@@ -59,35 +59,48 @@ function formatList(deviceId, listItems, listOptions) {
   const list = neeoapi.buildBrowseList(options);
   const itemsToAdd = list.prepareItemsAccordingToOffsetAndLimit(listItems);
   const kodiInstance = kodiController.getKodi(deviceId);
-  
 
-  console.log ("browseIdentifier:", browseIdentifier);
-
+  console.log('browseIdentifier:', browseIdentifier);
 
   //top menu part.
-  if ( options.offset == 0 ) {
+  if (options.offset == 0) {
     list.addListHeader(`${browseIdentifier}`);
-    if ( browseIdentifier == 'Movies' ){
-      list.addListItem({title: 'Filter', label: 'List All', thumbnailUri: images.icon_filter, browseIdentifier: 'Unwatched movies'});
-
-    } else if( browseIdentifier == 'Unwatched movies' ){
-      list.addListItem({title: 'Filter', label: 'List Unwatched', thumbnailUri: images.icon_filter, browseIdentifier: 'Watched movies'});
-
-    } else if ( browseIdentifier == 'Watched movies' ){
-      list.addListItem({title: 'Filter', label: 'List Watched', thumbnailUri: images.icon_filter, browseIdentifier: 'Movies'});
+    if (browseIdentifier == 'Movies') {
+      list.addListItem({
+        title: 'Filter',
+        label: 'List All',
+        thumbnailUri: images.icon_filter,
+        browseIdentifier: 'Unwatched movies',
+      });
+    } else if (browseIdentifier == 'Unwatched movies') {
+      list.addListItem({
+        title: 'Filter',
+        label: 'List Unwatched',
+        thumbnailUri: images.icon_filter,
+        browseIdentifier: 'Watched movies',
+      });
+    } else if (browseIdentifier == 'Watched movies') {
+      list.addListItem({
+        title: 'Filter',
+        label: 'List Watched',
+        thumbnailUri: images.icon_filter,
+        browseIdentifier: 'Movies',
+      });
     }
-    
   }
 
-
-  
-  itemsToAdd.map((item) => {
-    if (browseIdentifier == 'Movies' || browseIdentifier == "Recent Movies" || (browseIdentifier == 'Unwatched movies' && item.playcount == 0) ||  (browseIdentifier == 'Watched movies' && item.playcount != 0)){
+  itemsToAdd.map(item => {
+    if (
+      browseIdentifier == 'Movies' ||
+      browseIdentifier == 'Recent Movies' ||
+      (browseIdentifier == 'Unwatched movies' && item.playcount == 0) ||
+      (browseIdentifier == 'Watched movies' && item.playcount != 0)
+    ) {
       const listItem = {
         title: tools.movieTitle(item),
         label: tools.arrayToString(item.genre),
         thumbnailUri: tools.imageToHttp(kodiInstance, item.thumbnail),
-        actionIdentifier: `${item.movieid}`
+        actionIdentifier: `${item.movieid}`,
       };
       list.addListItem(listItem);
     }
@@ -95,38 +108,36 @@ function formatList(deviceId, listItems, listOptions) {
   return list;
 }
 
-
 //////////////////////////////////
 // Base Movie Menu
-function baseListMenu(deviceId){
-
+function baseListMenu(deviceId) {
   const options = {
     title: `Movies`,
     totalMatchingItems: 2,
-    browseIdentifier: ".",
+    browseIdentifier: '.',
     offset: 0,
-    limit: 10
+    limit: 10,
   };
   const list = neeoapi.buildBrowseList(options);
- 
-  if (kodiController.kodiReady(deviceId)){
+
+  if (kodiController.kodiReady(deviceId)) {
     list.addListHeader('Movies');
     list.addListItem({
-      title: "Movies",
+      title: 'Movies',
       thumbnailUri: images.icon_movie,
-      browseIdentifier: "Movies"
+      browseIdentifier: 'Movies',
     });
     list.addListItem({
-      title: "Recent Movies",
+      title: 'Recent Movies',
       thumbnailUri: images.icon_movie,
-      browseIdentifier: "Recent Movies"
+      browseIdentifier: 'Recent Movies',
     });
   } else {
     list.addListHeader('Kodi is not connected');
     list.addListItem({
-      title: "Tap to refresh",
+      title: 'Tap to refresh',
       thumbnailUri: images.icon_movie,
-      browseIdentifier: '.'
+      browseIdentifier: '.',
     });
   }
   return list;

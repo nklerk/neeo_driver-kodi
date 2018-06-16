@@ -8,42 +8,39 @@ const DEFAULT_PATH = '.';
 
 module.exports = {
   browse,
-  action
+  action,
 };
 
-function action (deviceId, episodeId){
-  console.log ("Now starting episode with episodeid:",episodeId);
-  kodiController.library.playerOpen(deviceId,{episodeid: parseInt(episodeId, 10)});
+function action(deviceId, episodeId) {
+  console.log('Now starting episode with episodeid:', episodeId);
+  kodiController.library.playerOpen(deviceId, { episodeid: parseInt(episodeId, 10) });
 }
 
 function browse(devideId, params) {
   const browseIdentifier = params.browseIdentifier || DEFAULT_PATH;
-  console.log ("BROWSEING", browseIdentifier);
+  console.log('BROWSEING', browseIdentifier);
   const listOptions = {
     limit: params.limit,
     offset: params.offset,
     browseIdentifier,
   };
 
-  if (browseIdentifier == "TV Shows"){
-    return kodiController.library.getTVShows(devideId).then((listItems)=>{
-      return formatList(devideId, listItems, listOptions, "TV Shows");
+  if (browseIdentifier == 'TV Shows') {
+    return kodiController.library.getTVShows(devideId).then(listItems => {
+      return formatList(devideId, listItems, listOptions, 'TV Shows');
     });
-
-
-  } else if (browseIdentifier == "Recent Episodes") {
-    return kodiController.library.getRecentEpisodes(devideId).then((listItems)=>{
-      return formatList(devideId, listItems, listOptions, "Recent Episodes");
-    }); 
-
+  } else if (browseIdentifier == 'Recent Episodes') {
+    return kodiController.library.getRecentEpisodes(devideId).then(listItems => {
+      return formatList(devideId, listItems, listOptions, 'Recent Episodes');
+    });
   } else if (browseIdentifier.match(/^tvshowid;[0-9]*;.*$/)) {
     const browseId = browseIdentifier.split(';');
     let id = parseInt(browseId[1], 10);
-    return kodiController.library.getTVshowEpisodes(devideId, id).then((listItems)=>{
+    return kodiController.library.getTVshowEpisodes(devideId, id).then(listItems => {
       return formatList(devideId, listItems, listOptions, browseId[2]);
-    }); 
-    
-  //Base Menu
+    });
+
+    //Base Menu
   } else {
     return baseListMenu(devideId);
   }
@@ -65,34 +62,34 @@ function formatList(deviceId, listItems, listOptions, title) {
   const itemsToAdd = list.prepareItemsAccordingToOffsetAndLimit(listItems);
   const kodiInstance = kodiController.getKodi(deviceId);
 
-  console.log ("listOptions.browseIdentifier:", browseIdentifier);
+  console.log('listOptions.browseIdentifier:', browseIdentifier);
 
   list.addListHeader(title);
-  if (browseIdentifier == "TV Shows"){
-    itemsToAdd.map((item) => {
+  if (browseIdentifier == 'TV Shows') {
+    itemsToAdd.map(item => {
       const listItem = {
         title: item.label,
         thumbnailUri: tools.imageToHttp(kodiInstance, item.thumbnail),
-        browseIdentifier: `tvshowid;${item.tvshowid};${item.label}`
+        browseIdentifier: `tvshowid;${item.tvshowid};${item.label}`,
       };
       list.addListItem(listItem);
     });
-  } else if (browseIdentifier == "Recent Episodes") {
-    itemsToAdd.map((item) => {
+  } else if (browseIdentifier == 'Recent Episodes') {
+    itemsToAdd.map(item => {
       const listItem = {
         title: tools.episodeTitleA(item),
         thumbnailUri: tools.imageToHttp(kodiInstance, item.art.thumb),
-        actionIdentifier: `${item.episodeid}`
+        actionIdentifier: `${item.episodeid}`,
       };
       list.addListItem(listItem);
     });
   } else {
-    itemsToAdd.map((item) => {
+    itemsToAdd.map(item => {
       const listItem = {
         title: item.title,
         label: `Season: ${item.season}, Episode: ${item.episode}`,
         thumbnailUri: tools.imageToHttp(kodiInstance, item.art.thumb),
-        actionIdentifier: `${item.episodeid}`
+        actionIdentifier: `${item.episodeid}`,
       };
       list.addListItem(listItem);
     });
@@ -100,36 +97,34 @@ function formatList(deviceId, listItems, listOptions, title) {
   return list;
 }
 
-
-function baseListMenu(deviceId){
-
+function baseListMenu(deviceId) {
   const options = {
     title: `TV Shows`,
     totalMatchingItems: 1,
-    browseIdentifier: ".",
+    browseIdentifier: '.',
     offset: 0,
-    limit: 10
+    limit: 10,
   };
   const list = neeoapi.buildBrowseList(options);
- 
-  if (kodiController.kodiReady(deviceId)){
+
+  if (kodiController.kodiReady(deviceId)) {
     list.addListHeader('TV Shows');
     list.addListItem({
-      title: "TV Shows",
+      title: 'TV Shows',
       thumbnailUri: images.icon_tvshow,
-      browseIdentifier: "TV Shows"
+      browseIdentifier: 'TV Shows',
     });
     list.addListItem({
-      title: "Recent Episodes",
+      title: 'Recent Episodes',
       thumbnailUri: images.icon_tvshow,
-      browseIdentifier: "Recent Episodes"
+      browseIdentifier: 'Recent Episodes',
     });
   } else {
     list.addListHeader('Kodi is not connected');
     list.addListItem({
-      title: "Tap to refresh",
+      title: 'Tap to refresh',
       thumbnailUri: images.icon_movie,
-      browseIdentifier: "."
+      browseIdentifier: '.',
     });
   }
   return list;
