@@ -8,11 +8,12 @@
 	"private": false,
 	"dependencies": {
 		"mdns-js": "^1.0.1",
-		"neeo-sdk": "^0.50.5",
+		"neeo-sdk": "git://github.com/NEEOInc/neeo-sdk.git#next",
 		"node-arp": "^1.0.6",
 		"node-kodi": "0.0.2-alpha",
 		"node-wol": "^0.1.1",
-		"request": "^2.86.0"
+		"request": "^2.86.0",
+		"ws": "^5.2.0"
 	},
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",

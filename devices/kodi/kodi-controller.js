@@ -3,14 +3,18 @@ const arp = require('node-arp');
 const mdns = require('mdns-js');
 const kodirpc = require('./kodi-rpc');
 const images = require('./images');
-const wol = require ('./wol');
+const wol = require('./wol');
 const request = require('request');
 const tools = require('./tools');
+//const kodiEvents = require('./kodi-events');
+const kodiConnector = require('./KodiConnector/index');
+
 mdns.excludeInterface('0.0.0.0');
 
 let lastDiscovery;
 let kodiDB = {};
 let mdnsBrowser;
+let addDevicePassword = '';
 
 const COMMAND_QUEUE_INTERVAL = 3000;					//Interval for queueing Power On and Power Off commands.
 const COMMAND_QUEUE_TIMEOUTLONG = 300000;			//Maximum time for polling initial connection after WOL.
@@ -23,11 +27,12 @@ const PING_TIMEOUT = 1000;										//The time KODI has to respond on a applicat
 const MAC_INTERVAL = 500;
 
 module.exports = {
-  discovered,
-  discover,
+	discovered,
+	discover,
 	getKodi,
 	initialise,
-	library:{
+	addDeviceDiscoveryPassword,
+	library: {
 		getRecentlyAddedMovies,
 		getMovies,
 		getTVShows,
@@ -50,13 +55,18 @@ module.exports = {
 discover();
 
 
+function addDeviceDiscoveryPassword(pass) {
+	console.log('Passord used:', pass);
+	addDevicePassword = pass
+	return true;
+}
 //Pinging Application to check wether the instance is availeble.
-function ping(deviceId){
-	if (kodiReady(deviceId)){
+function ping(deviceId) {
+	if (kodiReady(deviceId)) {
 		let kodi = getKodi(deviceId);
-		request.get(`http://${kodi.ip}:${kodi.port}/jsonrpc?request=%7B%22jsonrpc%22%3A%222.0%22%2C%22method%22%3A%22JSONRPC.Ping%22%2C%22params%22%3A%7B%7D%2C%22id%22%3A%22NEEOPING%22%7D`, {timeout: 1000}, function(err) {
-			if (err !== null){
-				disconnected(deviceId,err);
+		request.get(`http://${kodi.username}:${kodi.password}@${kodi.ip}:${kodi.port}/jsonrpc?request=%7B%22jsonrpc%22%3A%222.0%22%2C%22method%22%3A%22JSONRPC.Ping%22%2C%22params%22%3A%7B%7D%2C%22id%22%3A%22NEEOPING%22%7D`, { timeout: 1000 }, function (err) {
+			if (err !== null) {
+				disconnected(deviceId, err);
 			}
 		});
 	}
@@ -65,27 +75,27 @@ function ping(deviceId){
 
 //This is called by neeo when searching for a kodi driver.
 function discovered() {
-	console.log ("Discovered devices requested by NEEO.");
+	console.log("Discovered devices requested by NEEO.");
 	discover();
-	return new Promise(function(resolve, reject) { 
+	return new Promise(function (resolve, reject) {
 		setTimeout(() => {
-				console.log('Responding discovered devices to NEEO.');
-				let kodi = [];
-				for ( let devideId in kodiDB){
-					kodi.push({
-						id: kodiDB[devideId].mac,
-						name: kodiDB[devideId].name,
-						reachable: kodiDB[devideId].reachable
-					});
-				}
-				resolve(kodi);
+			console.log('Responding discovered devices to NEEO.');
+			let kodi = [];
+			for (let devideId in kodiDB) {
+				kodi.push({
+					id: kodiDB[devideId].mac,
+					name: kodiDB[devideId].name,
+					reachable: kodiDB[devideId].reachable
+				});
+			}
+			resolve(kodi);
 		}, NEEO_DRIVER_SEARCH_DELAY)
 	});
-} 
+}
 
 // Init driver.
-function initialise(){
-	console.log ("Initialize KODI Controller.");
+function initialise() {
+	console.log("Initialize KODI Controller.");
 	discover();
 }
 
@@ -93,23 +103,23 @@ function initialise(){
 
 // Discover KODI instances.
 function discover() {
-	if (!lastDiscovery || (Date.now() - lastDiscovery > MDNS_TIMEOUT)){
+	if (!lastDiscovery || (Date.now() - lastDiscovery > MDNS_TIMEOUT)) {
 		lastDiscovery = Date.now()
 		mdnsBrowser = mdns.createBrowser('_xbmc-jsonrpc-h._tcp');
-		
+
 		mdnsBrowser.on('ready', function () {
-			console.log ("MDNS:  Start");
+			console.log("MDNS:  Start");
 			mdnsBrowser.discover();
 		});
-	
+
 		mdnsBrowser.on('update', function (data) {
 			addKoditoDB(data);
-			console.log ("MDNS:  responce.");
+			console.log("MDNS:  responce.");
 		});
-	
+
 		setTimeout(() => {
 			mdnsBrowser.stop();
-			console.log ("MDNS:  Stop");
+			console.log("MDNS:  Stop");
 		}, MDNS_TIMEOUT);
 	}
 }
@@ -117,52 +127,71 @@ function discover() {
 
 
 //Add a found kodi to the database.
-function addKoditoDB (discoveredData) {
+function addKoditoDB(discoveredData) {
 	const ip = discoveredData.addresses[0];
-  const port = discoveredData.port;
-	const reachable = true;	
+	const port = discoveredData.port;
+	const reachable = true;
 	const name = discoveredData.fullname.replace(/\._xbmc-jsonrpc-h\._tcp\.local/g, '');;
-	const rpc = kodirpc.build(ip,port);
-	
-	getMacadress(rpc).then(mac =>{
-		console.log (`KODIdb:  Found KODI instance with IP:${ip}, PORT:${port},MAC: ${mac}, NAME:${name}.`);
-		kodiDB[mac] = {name, ip, port, mac, reachable, rpc};
-		conectedMessage(mac);
-		clearInterval(kodiDB[mac].ping);
-		kodiDB[mac].ping = setInterval( function(){
-			ping(mac);
-		}, PING_INTERVAL);
+	const username = 'kodi';	// Preparation for user pass setting.
+	const password = 'kodi';  // Preperation for user pass setting.
+	const rpc = kodirpc.build(ip, port, username, password);
+
+	//const events = new kodiEvents(ip);
+
+	getMacadress(rpc).then(mac => {
+		console.log(`KODIdb:  Found KODI instance with IP:${ip}, PORT:${port},MAC:${mac}, NAME:${name}.`);
+		const ws = new kodiConnector.rpcws(mac, ip);
+		kodiDB[mac] = { name, ip, port, mac, reachable, username, password, ws };
+
+
+		kodiDB[mac].ws.events.on('notification', x => {
+			console.log('notification', x.host, x.mac, x.eventdata);
+		});
+
+		kodiDB[mac].ws.events.on('connected', x => {
+			console.log('connect', x.mac);
+			console.log(kodiDB[mac].ws.isConnected());
+		})
+
+		kodiDB[mac].ws.events.on('closed', x => {
+			console.log('close', x.mac);
+		})
+
+		kodiDB[mac].ws.events.on('error', x => {
+			//console.log ('error',x.mac);
+		})
+
 	});
 }
 
 
 
-function getKodi (deviceId){
-	if (kodiReady(deviceId)){
+function getKodi(deviceId) {
+	if (kodiReady(deviceId)) {
 		return kodiDB[deviceId];
 	} else {
 		return false;
-	}	
+	}
 }
 
 
 
-function getKodiIp (deviceId){
-	if (kodiDB[deviceId] && kodiDB[deviceId].ip){
+function getKodiIp(deviceId) {
+	if (kodiDB[deviceId] && kodiDB[deviceId].ip) {
 		return kodiDB[deviceId].ip;
 	} else {
 		return "255.255.255.255";
-	}	
+	}
 }
 
 
 
-function getMacadress(rpc, tries){
+function getMacadress(rpc, tries) {
 	tries = tries || 0;
-	return rpc.rpc("XBMC.GetInfoLabels", '{"labels":["Network.MacAddress"]}').then(r=>{
+	return rpc.rpc("XBMC.GetInfoLabels", '{"labels":["Network.MacAddress"]}').then(r => {
 		const mac = r.result["Network.MacAddress"];
 		if (!tools.isProperMac(mac) && tries < 30) {
-			return getMacadress(rpc, tries+1);
+			return getMacadress(rpc, tries + 1);
 		} else {
 			return mac;
 		}
@@ -171,8 +200,8 @@ function getMacadress(rpc, tries){
 
 
 
-function kodiReady(deviceID){
-	if (kodiDB[deviceID] && kodiDB[deviceID].reachable){
+function kodiReady(deviceID) {
+	if (kodiDB[deviceID] && kodiDB[deviceID].reachable) {
 		return true;
 	} else {
 		discover();
@@ -183,9 +212,9 @@ function kodiReady(deviceID){
 
 
 //getRecentlyAddedMovies
-function getRecentlyAddedMovies(deviceId, offset, limit){
-	if (kodiReady(deviceId)){
-		return kodiDB[deviceId].rpc.videolibrary.getRecentlyAddedMovies({"properties" : ["thumbnail", "playcount", "year", "genre"],"limits": { "start" : 0, "end": 30 }});
+function getRecentlyAddedMovies(deviceId, offset, limit) {
+	if (kodiReady(deviceId)) {
+		return kodiDB[deviceId].ws.send('VideoLibrary.GetRecentlyAddedMovies', { "properties": ["thumbnail", "playcount", "year", "genre"], "limits": { "start": 0, "end": 30 } });
 	} else {
 		return Promise.resolve({});
 	}
@@ -193,10 +222,17 @@ function getRecentlyAddedMovies(deviceId, offset, limit){
 
 
 
-function getMovies(deviceId, offset, limit){
-	if (kodiReady(deviceId)){
+function getMovies(deviceId, filter, offset, limit) {
+	if (kodiReady(deviceId)) {
 		const end = offset + limit;
-		return kodiDB[deviceId].rpc.videolibrary.getMovies({"properties" : ["thumbnail", "playcount", "year", "genre"], "sort": {"order": "ascending", "method": "title"},"limits": { "start" : offset, "end": end }});
+		let queery = {};
+		if (filter.field) {
+			queery = { "properties": ["thumbnail", "playcount", "year", "genre"], filter, "sort": { "order": "ascending", "method": "title" }, "limits": { "start": offset, "end": end } }
+		} else {
+			queery = { "properties": ["thumbnail", "playcount", "year", "genre"], "sort": { "order": "ascending", "method": "title" }, "limits": { "start": offset, "end": end } }
+		}
+		//return kodiDB[deviceId].rpc.videolibrary.getMovies(queery);
+		return kodiDB[deviceId].ws.send('VideoLibrary.GetMovies', queery);
 	} else {
 		return Promise.resolve({});
 	}
@@ -204,9 +240,9 @@ function getMovies(deviceId, offset, limit){
 
 
 
-function getRecentEpisodes(deviceId){
-	if (kodiReady(deviceId)){
-		return kodiDB[deviceId].rpc.videolibrary.getEpisodes({"limits": { "start" : 0, "end": 30 },"sort": {"order": "descending", "method": "dateadded"}});
+function getRecentEpisodes(deviceId) {
+	if (kodiReady(deviceId)) {
+		return kodiDB[deviceId].ws.send('VideoLibrary.GetEpisodes', { "limits": { "start": 0, "end": 30 }, "sort": { "order": "descending", "method": "dateadded" } });
 	} else {
 		return Promise.resolve({});
 	}
@@ -214,10 +250,10 @@ function getRecentEpisodes(deviceId){
 
 
 
-function getTVshowEpisodes(deviceId, showId, offset, limit){
-	if (kodiReady(deviceId)){
-		const end = offset + limit ;
-		return kodiDB[deviceId].rpc.videolibrary.getEpisodes({"tvshowid":showId,"limits": { "start" : offset, "end": end }});
+function getTVshowEpisodes(deviceId, showId, offset, limit) {
+	if (kodiReady(deviceId)) {
+		const end = offset + limit;
+		return kodiDB[deviceId].ws.send('VideoLibrary.GetEpisodes', { "tvshowid": showId, "limits": { "start": offset, "end": end } });
 	} else {
 		return Promise.resolve({});
 	}
@@ -225,10 +261,10 @@ function getTVshowEpisodes(deviceId, showId, offset, limit){
 
 
 
-function getTVShows(deviceId, offset, limit){
-	if (kodiReady(deviceId)){
-		const end = offset + limit ;
-		return kodiDB[deviceId].rpc.videolibrary.getTVShows({"sort": {"order": "ascending", "method": "title"},"limits": { "start" : offset, "end": end }});
+function getTVShows(deviceId, offset, limit) {
+	if (kodiReady(deviceId)) {
+		const end = offset + limit;
+		return kodiDB[deviceId].ws.send('VideoLibrary.GetTVShows', { "sort": { "order": "ascending", "method": "title" }, "limits": { "start": offset, "end": end } });
 	} else {
 		return Promise.resolve({});
 	}
@@ -236,10 +272,10 @@ function getTVShows(deviceId, offset, limit){
 
 
 
-function getAlbums(deviceId, offset, limit){
-	if (kodiReady(deviceId)){
-		const end = offset + limit ;
-		return kodiDB[deviceId].rpc.audiolibrary.getAlbums({"properties":["thumbnail","artist","albumlabel"],"sort":{"method":"title","order":"ascending","ignorearticle":true},"limits": { "start" : offset, "end": end }});
+function getAlbums(deviceId, offset, limit) {
+	if (kodiReady(deviceId)) {
+		const end = offset + limit;
+		return kodiDB[deviceId].ws.send('AudioLibrary.GetAlbums', { "properties": ["thumbnail", "artist", "albumlabel"], "sort": { "method": "title", "order": "ascending", "ignorearticle": true }, "limits": { "start": offset, "end": end } });
 	} else {
 		return Promise.resolve({});
 	}
@@ -247,10 +283,10 @@ function getAlbums(deviceId, offset, limit){
 
 
 
-function getLatestAlbums(deviceId, offset, limit){
-	if (kodiReady(deviceId)){
-		const end = offset + limit ;
-		return kodiDB[deviceId].rpc.audiolibrary.getRecentlyAddedAlbums({"properties":["thumbnail","artist","albumlabel"],"limits": { "start" : offset, "end": end }});
+function getLatestAlbums(deviceId, offset, limit) {
+	if (kodiReady(deviceId)) {
+		const end = offset + limit;
+		return kodiDB[deviceId].ws.send('AudioLibrary.GetRecentlyAddedAlbums', { "properties": ["thumbnail", "artist", "albumlabel"], "limits": { "start": offset, "end": end } });
 	} else {
 		return Promise.resolve({});
 	}
@@ -258,10 +294,10 @@ function getLatestAlbums(deviceId, offset, limit){
 
 
 
-function getAlbumTracks(deviceId, id, offset, limit){
-	if (kodiReady(deviceId)){
-		const end = offset + limit ;
-		return kodiDB[deviceId].rpc.audiolibrary.getSongs({"properties":["title","thumbnail","artist","album", "track"],"sort":{"method":"track","order":"ascending","ignorearticle":true},"filter":{"albumid":id},"limits": { "start" : offset, "end": end }});
+function getAlbumTracks(deviceId, id, offset, limit) {
+	if (kodiReady(deviceId)) {
+		const end = offset + limit;
+		return kodiDB[deviceId].ws.send('AudioLibrary.GetSongs', { "properties": ["title", "thumbnail", "artist", "album", "track"], "sort": { "method": "track", "order": "ascending", "ignorearticle": true }, "filter": { "albumid": id }, "limits": { "start": offset, "end": end } });
 	} else {
 		return Promise.resolve({});
 	}
@@ -269,10 +305,10 @@ function getAlbumTracks(deviceId, id, offset, limit){
 
 
 
-function getMusicVideos(deviceId, offset, limit){
-	if (kodiReady(deviceId)){
-		const end = offset + limit ;
-		return kodiDB[deviceId].rpc.videolibrary.getMusicVideos({"properties":["title","thumbnail","artist"],"sort":{"method":"track","order":"ascending","ignorearticle":true},"limits": { "start" : offset, "end": end }});
+function getMusicVideos(deviceId, offset, limit) {
+	if (kodiReady(deviceId)) {
+		const end = offset + limit;
+		return kodiDB[deviceId].ws.send('VideoLibrary.GetMusicVideos', { "properties": ["title", "thumbnail", "artist"], "sort": { "method": "track", "order": "ascending", "ignorearticle": true }, "limits": { "start": offset, "end": end } });
 	} else {
 		return Promise.resolve({});
 	}
@@ -280,10 +316,10 @@ function getMusicVideos(deviceId, offset, limit){
 
 
 
-function getPvrRadioChannels(deviceId, offset, limit){
-	if (kodiReady(deviceId)){
-		const end = offset + limit ;
-		return kodiDB[deviceId].rpc.pvr.getChannels({"channelgroupid":"allradio","properties":["thumbnail","channeltype","hidden","locked","channel","broadcastnow"],"limits": { "start" : offset, "end": end }});
+function getPvrRadioChannels(deviceId, offset, limit) {
+	if (kodiReady(deviceId)) {
+		const end = offset + limit;
+		return kodiDB[deviceId].ws.send('PVR.GetChannels', { "channelgroupid": "allradio", "properties": ["thumbnail", "channeltype", "hidden", "locked", "channel", "broadcastnow"], "limits": { "start": offset, "end": end } });
 	} else {
 		return Promise.resolve({});
 	}
@@ -291,10 +327,10 @@ function getPvrRadioChannels(deviceId, offset, limit){
 
 
 
-function getPvrTvChannels(deviceId, offset, limit){
-	if (kodiReady(deviceId)){
-		const end = offset + limit ;
-		return kodiDB[deviceId].rpc.pvr.getChannels({"channelgroupid":"alltv","properties":["thumbnail","channeltype","hidden","locked","channel","broadcastnow"],"limits": { "start" : offset, "end": end }});
+function getPvrTvChannels(deviceId, offset, limit) {
+	if (kodiReady(deviceId)) {
+		const end = offset + limit;
+		return kodiDB[deviceId].ws.send('PVR.GetChannels', { "channelgroupid": "alltv", "properties": ["thumbnail", "channeltype", "hidden", "locked", "channel", "broadcastnow"], "limits": { "start": offset, "end": end } });
 	} else {
 		return Promise.resolve({});
 	}
@@ -302,9 +338,9 @@ function getPvrTvChannels(deviceId, offset, limit){
 
 
 
-function getPvrRecordings(deviceId){
-	if (kodiReady(deviceId)){
-		return kodiDB[deviceId].rpc.rpc("PVR.GetRecordings", '{"properties":["title","starttime","endtime","art"]}');
+function getPvrRecordings(deviceId) {
+	if (kodiReady(deviceId)) {
+		return kodiDB[deviceId].ws.send('PVR.GetRecordings', { "properties": ["title", "starttime", "endtime", "art"] });
 	} else {
 		return Promise.resolve({});
 	}
@@ -312,31 +348,38 @@ function getPvrRecordings(deviceId){
 
 
 
-function playerOpen(deviceId,object){
-	if (kodiReady(deviceId)){
-		kodiDB[deviceId].rpc.player.open({item:object}).catch((e)=>{
-			disconnected(deviceId,e);
+function playerOpen(deviceId, object) {
+	if (kodiReady(deviceId)) {
+		kodiDB[deviceId].ws.send('Player.Open', { item: object }).catch((e) => {
+			disconnected(deviceId, e);
 		});
 	}
 }
 
 
 
-function sendCommand (deviceId,method,params,timer){
-	if (kodiReady(deviceId)){
-		if (method == "System.Shutdown" && kodiDB[deviceId].ping){
+function sendCommand(deviceId, method, params, timer) {
+	if (kodiReady(deviceId)) {
+		if (method == "System.Shutdown" && kodiDB[deviceId].ping) {
 			clearInterval(kodiDB[deviceId].ping);
 		}
-   	kodiDB[deviceId].rpc.rpc(method, params).catch((e)=>{
-			disconnected(deviceId,e);
-		});
+		if (params == '{}') {
+			kodiDB[deviceId].ws.send(method).catch((e) => {
+				disconnected(deviceId, e);
+			});
+		} else {
+			kodiDB[deviceId].ws.send(method, params).catch((e) => {
+				disconnected(deviceId, e);
+			});
+		}
+
 	} else {	//if kodi is not connected
 		const time = timer || Date.now();
-		if (method == "WOL"){
+		if (method == "WOL") {
 			wol.powerOnKodi(deviceId, getKodiIp(deviceId));
-			if (Date.now() - time < COMMAND_QUEUE_TIMEOUTLONG){
-				setTimeout(() => { 
-					sendCommand(deviceId, method, params, time);	
+			if (Date.now() - time < COMMAND_QUEUE_TIMEOUTLONG) {
+				setTimeout(() => {
+					sendCommand(deviceId, method, params, time);
 				}, COMMAND_QUEUE_INTERVAL);
 			}
 		}
@@ -349,26 +392,26 @@ function sendCommand (deviceId,method,params,timer){
 
 
 
-function sendContentAwareCommand(deviceId,method,params){
-	sendCommand(deviceId,method,params); //Is allways send, checked official kodi remote app.
-	if (kodiReady(deviceId)){
-		if (method == 'Input.right' || method == 'Input.left' || method == 'Input.down' || method == 'Input.up' || method == 'Input.select' || method == 'Player.SetSpeed'){
-			kodiDB[deviceId].rpc.gui.getProperties({"properties":["currentwindow","fullscreen"]}).then(window => {
+function sendContentAwareCommand(deviceId, method, params) {
+	sendCommand(deviceId, method, params); //Is allways send, checked official kodi remote app.
+	if (kodiReady(deviceId)) {
+		if (method == 'Input.right' || method == 'Input.left' || method == 'Input.down' || method == 'Input.up' || method == 'Input.select' || method == 'Player.SetSpeed') {
+			kodiDB[deviceId].ws.send('GUI.GetProperties', { "properties": ["currentwindow", "fullscreen"] }).then(window => {
 				//console.log ('CAC window:', window);
-				if (window.currentwindow.label == 'Fullscreen video'){
-					kodiDB[deviceId].rpc.rpc("XBMC.GetInfoBooleans", `{"booleans":["VideoPlayer.HasMenu","Pvr.IsPlayingTv"]}`).then(resp => {
-						console.log ('CAC HasMenu:', resp.result[`VideoPlayer.HasMenu`]);
-						console.log ('CAC IsPlayingTv:', resp.result[`Pvr.IsPlayingTv`]);
-						if(resp.result[`Pvr.IsPlayingTv`]){
-							if (method == 'Player.SetSpeed' && params == '{"playerid":1,"speed":-2}'){ sendCommand(deviceId,'Input.ExecuteAction','{ "action": "channeldown"}'); } 
-							if (method == 'Player.SetSpeed' && params == '{"playerid":1,"speed":2}'){ sendCommand(deviceId,'Input.ExecuteAction','{ "action": "channelup"}');	} 
+				if (window.currentwindow.label == 'Fullscreen video') {
+					kodiDB[deviceId].ws.send('XBMC.GetInfoBooleans', { "booleans": ["VideoPlayer.HasMenu", "Pvr.IsPlayingTv"] }).then(resp => {
+						console.log('CAC HasMenu:', resp['VideoPlayer.HasMenu']);
+						console.log('CAC IsPlayingTv:', resp[`Pvr.IsPlayingTv`]);
+						if (resp[`Pvr.IsPlayingTv`]) {
+							if (method == 'Player.SetSpeed' && params == '{"playerid":1,"speed":-2}') { sendCommand(deviceId, 'Input.ExecuteAction', '{ "action": "channeldown"}'); }
+							if (method == 'Player.SetSpeed' && params == '{"playerid":1,"speed":2}') { sendCommand(deviceId, 'Input.ExecuteAction', '{ "action": "channelup"}'); }
 						}
-						if (!resp.result[`VideoPlayer.HasMenu`]){
-							if (method == 'Input.up')    { sendCommand(deviceId,'Player.Seek','{"value":"bigforward","playerid":1}'); }
-							if (method == 'Input.down')  { sendCommand(deviceId,'Player.Seek','{"value":"bigbackward","playerid":1}'); }
-							if (method == 'Input.left')  { sendCommand(deviceId,'Player.Seek','{"value":"smallbackward","playerid":1}'); }
-							if (method == 'Input.right') { sendCommand(deviceId,'Player.Seek','{"value":"smallforward","playerid":1}'); }
-							if (method == 'Input.select') { sendCommand(deviceId,'Input.ShowOSD','{}'); }
+						if (!resp[`VideoPlayer.HasMenu`]) {
+							if (method == 'Input.up') { sendCommand(deviceId, 'Player.Seek', '{"value":"bigforward","playerid":1}'); }
+							if (method == 'Input.down') { sendCommand(deviceId, 'Player.Seek', '{"value":"bigbackward","playerid":1}'); }
+							if (method == 'Input.left') { sendCommand(deviceId, 'Player.Seek', '{"value":"smallbackward","playerid":1}'); }
+							if (method == 'Input.right') { sendCommand(deviceId, 'Player.Seek', '{"value":"smallforward","playerid":1}'); }
+							if (method == 'Input.select') { sendCommand(deviceId, 'Input.ShowOSD', '{}'); }
 						} //if (!resp.VideoPlayer.HasMenu){
 					}) // RPC XBMC.GetInfoBooleans
 				} // if (window.fullscreen)else do nothing
@@ -379,25 +422,26 @@ function sendContentAwareCommand(deviceId,method,params){
 
 
 
-function conectedMessage (deviceId){
+function conectedMessage(deviceId) {
 	const message = {
-		"title":"NEEO",
-		"message":"The NEEO IP driver is connected", 
-		"image":images.logo_NEEO_Twitter, 
-		"displaytime":CONNECTED_BANNER_TIME
+		"title": "NEEO",
+		"message": "The NEEO IP driver is connected",
+		"image": images.logo_NEEO_Twitter,
+		"displaytime": CONNECTED_BANNER_TIME
 	}
 	//console.log(`Send KODI notification ${message.message}.`)
-	kodiDB[deviceId].rpc.gui.showNotification(message).catch((e)=>{
-		disconnected(deviceId,e);
+	let x = kodiDB[deviceId].ws;
+	kodiDB[deviceId].ws.send('GUI.ShowNotification', message).catch((e) => {
+		disconnected(deviceId, e);
 	});
 }
 
 
 
-function disconnected(deviceId, error){
-	console.log (`Got an error from KODI with ID "${deviceId}".`);
-	console.log (error);
-	console.log (`Marking KODI with ID "${deviceId}" as offline.`);
+function disconnected(deviceId, error) {
+	console.log(`Got an error from KODI with ID "${deviceId}".`);
+	console.log(error);
+	console.log(`Marking KODI with ID "${deviceId}" as offline.`);
 	clearInterval(kodiDB[deviceId].ping);
-	kodiDB[deviceId].reachable = false;	
+	kodiDB[deviceId].reachable = false;
 }

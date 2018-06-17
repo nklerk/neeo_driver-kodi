@@ -10,11 +10,11 @@ const kodiController = require('./kodi-controller');
 
 
 function onButtonPressed(name, deviceid) {
-  console.log ("Button pressed:", deviceid, name)
+  console.log("Button pressed:", deviceid, name)
   const cmd = commands.neeoCommands()[name];
-  if (cmd.cac){
+  if (cmd.cac) {
     kodiController.sendContentAwareCommand(deviceid, cmd.method, JSON.stringify(cmd.params));
-  }else{
+  } else {
     kodiController.sendCommand(deviceid, cmd.method, JSON.stringify(cmd.params));
   }
 };
@@ -68,8 +68,37 @@ function initialise() {
   kodiController.initialise();
 }
 
+function addDeviceDiscoveryPassword(pass) {
+  return kodiController.addDeviceDiscoveryPassword(pass);
+}
+
+function volumeGet() {
+  return 100; // add code.
+}
+
+function volumeSet(x, y) {
+  console.log('I NEED TO BE CODED TO SET VOLUME TO', x, y)
+  return true; // add code.
+}
+
+function nowPlayingLabel() {
+  // add code.
+  return "Star Wars, The Last Jedi (2017)";
+}
+
+function nowPlayingImg() {
+  console.log("nowPlayingImg()")
+  return 'http://walter.trakt.tv/images/movies/000/114/333/posters/thumb/0678d5ad46.jpg';
+}
+
 module.exports = {
   onButtonPressed,
+  volume: {
+    get: volumeGet,
+    set: volumeSet
+  },
+  nowPlayingLabel,
+  nowPlayingImg,
   movieLibrary: {
     getter: movieLibraryGetter,
     action: movieLibraryAction,
@@ -87,6 +116,7 @@ module.exports = {
     action: pvrLibraryAction,
   },
   discoverDevices,
+  addDeviceDiscoveryPassword,
   registerStateUpdateCallback,
   initialise
 };

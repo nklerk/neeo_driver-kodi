@@ -83,8 +83,15 @@ In Kodi make sure to enable the following settings:
 * **michael kohler** - *Debugging and help*
 * **NEEO** - *SDK* - [Website](https://neeo.com/)
 
+# ToDo:
+- Remove url requests and move to ws.
+- Only connect when connection is requested.
+- general improvements.
 
 # Releases
+## Version 1.1.4
+- Added websocket connection.
+
 ## Version 1.1.3
 - Reworked the way itemlists are build. now steps of 64 items are fetched.
 - Code cleaning.
