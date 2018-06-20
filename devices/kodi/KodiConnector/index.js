@@ -92,13 +92,6 @@ class Client {
     });
   }
 
-  evBuild(mac, param) {
-    return {
-      mac,
-      eventdata: param
-    };
-  }
-
   isConnected(mac) {
     return this.socket.readyState === WebSocket.OPEN;
   }
