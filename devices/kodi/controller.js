@@ -1,19 +1,19 @@
-'use strict';
+"use strict";
 
-const commands = require('./Commands/commands');
-const browserServiceMovies = require('./BrowserService/kodi-browserService-movies');
-const browserServiceMusic = require('./BrowserService/kodi-browserService-music');
-const browserServiceTVShow = require('./BrowserService/kodi-browserService-tvshow');
-const browserServicePVR = require('./BrowserService/kodi-browserService-pvr');
-const kodiController = require('./kodi-controller');
+const commands = require("./Commands/commands");
+const browserServiceMovies = require("./BrowserService/kodi-browserService-movies");
+const browserServiceMusic = require("./BrowserService/kodi-browserService-music");
+const browserServiceTVShow = require("./BrowserService/kodi-browserService-tvshow");
+const browserServicePVR = require("./BrowserService/kodi-browserService-pvr");
+const kodiController = require("./kodi-controller");
 
 function onButtonPressed(name, deviceid) {
-  console.log('Button pressed:', deviceid, name);
+  console.log("Button pressed:", deviceid, name);
   const cmd = commands.neeoCommands()[name];
   if (cmd.cac) {
-    kodiController.sendContentAwareCommand(deviceid, cmd.method, JSON.stringify(cmd.params));
+    kodiController.sendContentAwareCommand(deviceid, cmd.method, cmd.params);
   } else {
-    kodiController.sendCommand(deviceid, cmd.method, JSON.stringify(cmd.params));
+    kodiController.sendCommand(deviceid, cmd.method, cmd.params);
   }
 }
 
@@ -58,33 +58,64 @@ function discoverDevices() {
   return kodiController.discovered();
 }
 
-function registerStateUpdateCallback() {
-  // not in use //
+//Inform state changes
+function registerStateUpdateCallback(updateFunction) {
+  kodiController.SendComponentUpdate(updateFunction);
 }
 
+//init.
 function initialise() {
   kodiController.initialise();
 }
 
+//Password thingy...
+function addDeviceDiscoveryPassword(pass) {
+  return kodiController.addDeviceDiscoveryPassword(pass);
+}
+
+function volumeGet(deviceId) {
+  return kodiController.getVolume(deviceId);
+}
+
+function volumeSet(deviceId, value) {
+  kodiController.setVolume(deviceId, value);
+  return true; // add code.
+}
+
+function nowPlayingLabel(deviceId) {
+  return kodiController.getNowPlayingLabel(deviceId);
+}
+
+function nowPlayingImg(deviceId) {
+  return kodiController.getNowPlayingImg(deviceId);
+}
+
 module.exports = {
   onButtonPressed,
+  volume: {
+    get: volumeGet,
+    set: volumeSet
+  },
+  nowPlayingLabel,
+  nowPlayingImg,
   movieLibrary: {
     getter: movieLibraryGetter,
-    action: movieLibraryAction,
+    action: movieLibraryAction
   },
   musicLibrary: {
     getter: musicLibraryGetter,
-    action: musicLibraryAction,
+    action: musicLibraryAction
   },
   tvshowLibrary: {
     getter: tvshowLibraryGetter,
-    action: tvshowLibraryAction,
+    action: tvshowLibraryAction
   },
   pvrLibrary: {
     getter: pvrLibraryGetter,
-    action: pvrLibraryAction,
+    action: pvrLibraryAction
   },
   discoverDevices,
+  addDeviceDiscoveryPassword,
   registerStateUpdateCallback,
-  initialise,
+  initialise
 };
