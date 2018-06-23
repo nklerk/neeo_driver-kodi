@@ -1,10 +1,10 @@
-'use strict';
-const images = require('../images');
-const neeoapi = require('neeo-sdk');
-const kodiController = require('../kodi-controller');
-const tools = require('../tools');
+"use strict";
+const images = require("../images");
+const neeoapi = require("neeo-sdk");
+const kodiController = require("../kodi-controller");
+const tools = require("../tools");
 
-const DEFAULT_PATH = '.';
+const DEFAULT_PATH = ".";
 
 module.exports = {
   browse,
@@ -12,14 +12,14 @@ module.exports = {
 };
 
 function action(deviceId, actionId) {
-  if (actionId.indexOf('albumid') > -1) {
-    actionId = actionId.replace('albumid', '');
+  if (actionId.indexOf("albumid") > -1) {
+    actionId = actionId.replace("albumid", "");
     kodiController.library.playerOpen(deviceId, { albumid: parseInt(actionId, 10) });
-  } else if (actionId.indexOf('songid') > -1) {
-    actionId = actionId.replace('songid', '');
+  } else if (actionId.indexOf("songid") > -1) {
+    actionId = actionId.replace("songid", "");
     kodiController.library.playerOpen(deviceId, { songid: parseInt(actionId, 10) });
-  } else if (actionId.indexOf('musicvideoid') > -1) {
-    actionId = actionId.replace('musicvideoid', '');
+  } else if (actionId.indexOf("musicvideoid") > -1) {
+    actionId = actionId.replace("musicvideoid", "");
     kodiController.library.playerOpen(deviceId, { musicvideoid: parseInt(actionId, 10) });
   }
 }
@@ -34,36 +34,32 @@ function browse(devideId, params) {
   };
 
   if (browseIdentifier == "Albums") {
-    return kodiController.library.getAlbums(devideId, listOptions.offset, listOptions.limit).then((x) => {
+    return kodiController.library.getAlbums(devideId, listOptions.offset, listOptions.limit).then(x => {
       const listItems = tools.itemCheck(x, x.albums);
-      listOptions.total = x.limits.total
+      listOptions.total = x.limits.total;
       return formatList(devideId, listItems, listOptions, browseIdentifier);
     });
-
-
   } else if (browseIdentifier == "Recent albums") {
-    return kodiController.library.getLatestAlbums(devideId, listOptions.offset, listOptions.limit).then((x) => {
+    return kodiController.library.getLatestAlbums(devideId, listOptions.offset, listOptions.limit).then(x => {
       const listItems = tools.itemCheck(x, x.albums);
-      listOptions.total = x.limits.total
+      listOptions.total = x.limits.total;
       return formatList(devideId, listItems, listOptions, browseIdentifier);
     });
-
   } else if (browseIdentifier == "Music Videos") {
-    return kodiController.library.getMusicVideos(devideId, listOptions.offset, listOptions.limit).then((x) => {
+    return kodiController.library.getMusicVideos(devideId, listOptions.offset, listOptions.limit).then(x => {
       const listItems = tools.itemCheck(x, x.musicvideos);
-      listOptions.total = x.limits.total
+      listOptions.total = x.limits.total;
       return formatList(devideId, listItems, listOptions, browseIdentifier);
     });
-
   } else if (browseIdentifier.match(/^albumid;[0-9]*;.*$/)) {
-    const browseId = browseIdentifier.split(';');
+    const browseId = browseIdentifier.split(";");
     let id = parseInt(browseId[1], 10);
     if (listOptions.offset > 0) {
       listOptions.offset = listOptions.offset - 1; //Fix because 1 item is added to the top for playing the album
     }
-    return kodiController.library.getAlbumTracks(devideId, id, listOptions.offset, listOptions.limit).then((x) => {
+    return kodiController.library.getAlbumTracks(devideId, id, listOptions.offset, listOptions.limit).then(x => {
       const listItems = tools.itemCheck(x, x.songs);
-      listOptions.total = x.limits.total
+      listOptions.total = x.limits.total;
       return formatList(devideId, listItems, listOptions, browseIdentifier);
     });
 
@@ -76,7 +72,6 @@ function browse(devideId, params) {
 //////////////////////////////////
 // Format Browsing list
 function formatList(deviceId, listItems, listOptions, title) {
-
   let browseIdentifier = listOptions.browseIdentifier;
 
   const options = {
@@ -84,7 +79,7 @@ function formatList(deviceId, listItems, listOptions, title) {
     totalMatchingItems: listItems.length,
     browseIdentifier,
     offset: listOptions.offset || 0,
-    limit: listOptions.limit,
+    limit: listOptions.limit
   };
 
   const list = neeoapi.buildBrowseList(options);
@@ -93,9 +88,8 @@ function formatList(deviceId, listItems, listOptions, title) {
 
   console.log("browseIdentifier:", browseIdentifier);
 
-
   if (browseIdentifier == "Albums" || browseIdentifier == "Recent albums") {
-    itemsToAdd.map((item) => {
+    itemsToAdd.map(item => {
       const listItem = {
         title: item.label,
         label: tools.arrayToString(item.artist),
@@ -105,7 +99,7 @@ function formatList(deviceId, listItems, listOptions, title) {
       list.addListItem(listItem);
     });
   } else if (browseIdentifier == "Music Videos") {
-    itemsToAdd.map((item) => {
+    itemsToAdd.map(item => {
       const listItem = {
         title: item.label,
         label: tools.arrayToString(item.artist),
@@ -115,12 +109,12 @@ function formatList(deviceId, listItems, listOptions, title) {
       list.addListItem(listItem);
     });
   } else if (browseIdentifier.match(/^albumid;[0-9]*;.*$/)) {
-    const browseId = browseIdentifier.split(';');
+    const browseId = browseIdentifier.split(";");
     let albumid = parseInt(browseId[1], 10);
     if (options.offset == 0) {
-      list.addListItem({ title: 'Play Album', thumbnailUri: images.icon_music, actionIdentifier: `albumid${albumid}` });
+      list.addListItem({ title: "Play Album", thumbnailUri: images.icon_music, actionIdentifier: `albumid${albumid}` });
     }
-    itemsToAdd.map((item) => {
+    itemsToAdd.map(item => {
       const listItem = {
         title: `${item.track}, ${item.label}`,
         label: tools.arrayToString(item.artist),
@@ -133,9 +127,7 @@ function formatList(deviceId, listItems, listOptions, title) {
   return list;
 }
 
-
 function baseListMenu(deviceId) {
-
   const options = {
     title: `Music`,
     totalMatchingItems: 3,
@@ -146,7 +138,7 @@ function baseListMenu(deviceId) {
   const list = neeoapi.buildBrowseList(options);
 
   if (kodiController.kodiReady(deviceId)) {
-    list.addListHeader('Music');
+    list.addListHeader("Music");
     list.addListItem({
       title: "Music Videos",
       thumbnailUri: images.icon_music,
@@ -163,7 +155,7 @@ function baseListMenu(deviceId) {
       browseIdentifier: "Recent albums"
     });
   } else {
-    list.addListHeader('Kodi is not connected');
+    list.addListHeader("Kodi is not connected");
     list.addListItem({
       title: "Tap to refresh",
       thumbnailUri: images.icon_movie,

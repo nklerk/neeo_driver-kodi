@@ -1,13 +1,11 @@
 "use strict";
-const arp = require("node-arp");
+
 const mdns = require("mdns-js");
 const kodirpc = require("./kodi-rpc");
 const images = require("./images");
 const wol = require("./wol");
-const request = require("request");
 const tools = require("./tools");
-//const kodiEvents = require('./kodi-events');
-const kodiConnector = require("./KodiConnector/index");
+const kodiConnector = require("./kodi-connector");
 
 mdns.excludeInterface("0.0.0.0");
 
@@ -15,16 +13,19 @@ let lastDiscovery;
 let kodiDB = {};
 let mdnsBrowser;
 let addDevicePassword = "";
+let sendComponentUpdate;
+let discoveryConnect = "";
+
+function SendComponentUpdate(SCU) {
+  sendComponentUpdate = SCU;
+  console.log("Updater registered.");
+}
 
 const COMMAND_QUEUE_INTERVAL = 3000; //Interval for queueing Power On and Power Off commands.
 const COMMAND_QUEUE_TIMEOUTLONG = 300000; //Maximum time for polling initial connection after WOL.
-const COMMAND_QUEUE_TIMEOUTSHORT = 6000; //Maximum time for polling shutdown command. (only used when driver is booted, KODI is on and first command send is Power Off.).
 const CONNECTED_BANNER_TIME = 10000; //Time length the NEEO Logo and connection banner is shown in KODI.
 const MDNS_TIMEOUT = 2000; //Duration per MDNS Discovery scan, after the timer the discovery gets cleaned and avoids memory leaks.
 const NEEO_DRIVER_SEARCH_DELAY = 8000; //Delay before responding on a discovery request. this gives the driver the time to discover, get mac, build RPC etc..
-const PING_INTERVAL = 5000; //Interval used to test online status of KODI.
-const PING_TIMEOUT = 1000; //The time KODI has to respond on a application PING request, on a timeout, the KODI instance is marked as unavaileble.
-const MAC_INTERVAL = 500;
 
 module.exports = {
   discovered,
@@ -47,28 +48,22 @@ module.exports = {
     getPvrRecordings,
     playerOpen
   },
+  getNowPlayingLabel,
+  getNowPlayingImg,
+  setVolume,
+  getVolume,
   kodiReady,
   sendCommand,
-  sendContentAwareCommand
+  sendContentAwareCommand,
+  SendComponentUpdate
 };
 
-discover();
+//discover();
 
 function addDeviceDiscoveryPassword(pass) {
   console.log("Passord used:", pass);
   addDevicePassword = pass;
   return true;
-}
-//Pinging Application to check wether the instance is availeble.
-function ping(deviceId) {
-  if (kodiReady(deviceId)) {
-    let kodi = getKodi(deviceId);
-    request.get(`http://${kodi.username}:${kodi.password}@${kodi.ip}:${kodi.port}/jsonrpc?request=%7B%22jsonrpc%22%3A%222.0%22%2C%22method%22%3A%22JSONRPC.Ping%22%2C%22params%22%3A%7B%7D%2C%22id%22%3A%22NEEOPING%22%7D`, { timeout: 1000 }, function(err) {
-      if (err !== null) {
-        disconnected(deviceId, err);
-      }
-    });
-  }
 }
 
 //This is called by neeo when searching for a kodi driver.
@@ -123,37 +118,45 @@ function discover() {
 //Add a found kodi to the database.
 function addKoditoDB(discoveredData) {
   const ip = discoveredData.addresses[0];
-  const port = discoveredData.port;
+  const httpPort = discoveredData.port;
   const reachable = true;
   const name = discoveredData.fullname.replace(/\._xbmc-jsonrpc-h\._tcp\.local/g, "");
   const username = "kodi"; // Preparation for user pass setting.
   const password = "kodi"; // Preperation for user pass setting.
-  const rpc = kodirpc.build(ip, port, username, password);
-
-  //const events = new kodiEvents(ip);
+  const rpc = kodirpc.build(ip, httpPort, username, password); ///needs to be removed and changed to 9090
 
   getMacadress(rpc).then(mac => {
-    console.log(`KODIdb:  Found KODI instance with IP:${ip}, PORT:${port},MAC:${mac}, NAME:${name}.`);
-    const ws = new kodiConnector(mac, ip);
-    kodiDB[mac] = { name, ip, port, mac, reachable, username, password, ws };
+    console.log(`KODIdb:  Discovered KODI instance with IP:${ip}, PORT:${httpPort},MAC:${mac}, NAME:${name}.`);
+    const ws = new kodiConnector(mac, ip, httpPort, username, password);
+    kodiDB[mac] = { name, ip, httpPort, mac, reachable, ws };
 
     kodiDB[mac].ws.events.on("notification", x => {
-      console.log("notification", x.host, x.mac, x.eventdata);
+      handleKodiEvents(x);
     });
 
     kodiDB[mac].ws.events.on("connected", x => {
-      console.log("connect", x.mac);
-      console.log(kodiDB[mac].ws.isConnected());
+      setTimeout(() => {
+        conectedMessage(x.mac);
+      }, 5000);
     });
 
-    kodiDB[mac].ws.events.on("closed", x => {
-      console.log("close", x.mac);
-    });
-
-    kodiDB[mac].ws.events.on("error", x => {
-      //console.log ('error',x.mac);
-    });
+    if (mac == discoveryConnect) {
+      kodiDB[mac].ws.connect();
+    }
   });
+}
+
+function handleKodiEvents(x) {
+  if (x.type === "VolumeChanged") {
+    console.log(`KODI instance ${x.mac} changed volume to ${x.volume}%`);
+    updateComponent(x.mac, "VOLUMESLIDER", x.volume);
+  }
+  if (x.type === "PlayingChanged") {
+    console.log(`KODI instance ${x.mac} now playing, ${x.title}`);
+    updateComponent(x.mac, "NOWPLAYINGLABEL", x.title);
+    updateComponent(x.mac, "NOWPLAYINGIMGSMALL", x.image);
+    updateComponent(x.mac, "NOWPLAYINGIMGLARGE", x.image);
+  }
 }
 
 function getKodi(deviceId) {
@@ -185,9 +188,15 @@ function getMacadress(rpc, tries) {
 }
 
 function kodiReady(deviceID) {
-  if (kodiDB[deviceID] && kodiDB[deviceID].reachable) {
-    return true;
+  if (typeof kodiDB[deviceID] !== "undefined") {
+    if (kodiDB[deviceID].ws.isConnected()) {
+      return true;
+    } else {
+      kodiDB[deviceID].ws.connect();
+      return false;
+    }
   } else {
+    discoveryConnect = deviceID;
     discover();
     return false;
   }
@@ -211,8 +220,15 @@ function getMovies(deviceId, filter, offset, limit) {
     } else {
       queery = { properties: ["thumbnail", "playcount", "year", "genre"], sort: { order: "ascending", method: "title" }, limits: { start: offset, end: end } };
     }
-    //return kodiDB[deviceId].rpc.videolibrary.getMovies(queery);
     return kodiDB[deviceId].ws.send("VideoLibrary.GetMovies", queery);
+  } else {
+    return Promise.resolve({});
+  }
+}
+
+function GetMovieDetails(deviceId, movieId) {
+  if (kodiReady(deviceId)) {
+    return kodiDB[deviceId].ws.send("VideoLibrary.GetMovieDetails", { movieid: movieId, properties: ["thumbnail", "title", "year"] });
   } else {
     return Promise.resolve({});
   }
@@ -220,7 +236,7 @@ function getMovies(deviceId, filter, offset, limit) {
 
 function getRecentEpisodes(deviceId) {
   if (kodiReady(deviceId)) {
-    return kodiDB[deviceId].ws.send("VideoLibrary.GetEpisodes", { limits: { start: 0, end: 30 }, sort: { order: "descending", method: "dateadded" } });
+    return kodiDB[deviceId].ws.send("VideoLibrary.GetEpisodes", { properties: ["title", "showtitle", "season", "episode", "art"], limits: { start: 0, end: 30 }, sort: { order: "descending", method: "dateadded" } });
   } else {
     return Promise.resolve({});
   }
@@ -229,7 +245,8 @@ function getRecentEpisodes(deviceId) {
 function getTVshowEpisodes(deviceId, showId, offset, limit) {
   if (kodiReady(deviceId)) {
     const end = offset + limit;
-    return kodiDB[deviceId].ws.send("VideoLibrary.GetEpisodes", { tvshowid: showId, limits: { start: offset, end: end } });
+    let queery = { tvshowid: showId, limits: { start: offset, end: end }, properties: ["title", "season", "episode", "art"] };
+    return kodiDB[deviceId].ws.send("VideoLibrary.GetEpisodes", queery);
   } else {
     return Promise.resolve({});
   }
@@ -238,7 +255,8 @@ function getTVshowEpisodes(deviceId, showId, offset, limit) {
 function getTVShows(deviceId, offset, limit) {
   if (kodiReady(deviceId)) {
     const end = offset + limit;
-    return kodiDB[deviceId].ws.send("VideoLibrary.GetTVShows", { sort: { order: "ascending", method: "title" }, limits: { start: offset, end: end } });
+    let queery = { sort: { order: "ascending", method: "title" }, limits: { start: offset, end: end }, properties: ["thumbnail"] };
+    return kodiDB[deviceId].ws.send("VideoLibrary.GetTVShows", queery);
   } else {
     return Promise.resolve({});
   }
@@ -306,6 +324,38 @@ function getPvrRecordings(deviceId) {
   }
 }
 
+function getNowPlayingImg(deviceId) {
+  if (kodiReady(deviceId)) {
+    return kodiDB[deviceId].ws.nowPlayingImg;
+  } else {
+    return images.logo_KODI_tp;
+  }
+}
+
+function getNowPlayingLabel(deviceId) {
+  if (kodiReady(deviceId)) {
+    return kodiDB[deviceId].ws.nowPlayingLabel;
+  } else {
+    return "";
+  }
+}
+
+function getVolume(deviceId) {
+  if (kodiReady(deviceId)) {
+    return kodiDB[deviceId].ws.volume;
+  } else {
+    return 0;
+  }
+}
+
+function setVolume(deviceId, volume) {
+  if (kodiReady(deviceId)) {
+    volume = parseInt(volume, 10);
+    kodiDB[deviceId].ws.volume = volume;
+    kodiDB[deviceId].ws.send("Application.SetVolume", { volume });
+  }
+}
+
 function playerOpen(deviceId, object) {
   if (kodiReady(deviceId)) {
     kodiDB[deviceId].ws.send("Player.Open", { item: object }).catch(e => {
@@ -316,9 +366,6 @@ function playerOpen(deviceId, object) {
 
 function sendCommand(deviceId, method, params, timer) {
   if (kodiReady(deviceId)) {
-    if (method == "System.Shutdown" && kodiDB[deviceId].ping) {
-      clearInterval(kodiDB[deviceId].ping);
-    }
     if (params == "{}") {
       kodiDB[deviceId].ws.send(method).catch(e => {
         disconnected(deviceId, e);
@@ -339,10 +386,6 @@ function sendCommand(deviceId, method, params, timer) {
         }, COMMAND_QUEUE_INTERVAL);
       }
     }
-
-    if (method == "System.Shutdown" && kodiDB[deviceId] && kodiDB[deviceId].ping) {
-      clearInterval(kodiDB[deviceId].ping);
-    }
   }
 }
 
@@ -351,31 +394,30 @@ function sendContentAwareCommand(deviceId, method, params) {
   if (kodiReady(deviceId)) {
     if (method == "Input.right" || method == "Input.left" || method == "Input.down" || method == "Input.up" || method == "Input.select" || method == "Player.SetSpeed") {
       kodiDB[deviceId].ws.send("GUI.GetProperties", { properties: ["currentwindow", "fullscreen"] }).then(window => {
-        //console.log ('CAC window:', window);
         if (window.currentwindow.label == "Fullscreen video") {
           kodiDB[deviceId].ws.send("XBMC.GetInfoBooleans", { booleans: ["VideoPlayer.HasMenu", "Pvr.IsPlayingTv"] }).then(resp => {
             console.log("CAC HasMenu:", resp["VideoPlayer.HasMenu"]);
             console.log("CAC IsPlayingTv:", resp[`Pvr.IsPlayingTv`]);
             if (resp[`Pvr.IsPlayingTv`]) {
               if (method == "Player.SetSpeed" && params == '{"playerid":1,"speed":-2}') {
-                sendCommand(deviceId, "Input.ExecuteAction", '{ "action": "channeldown"}');
+                sendCommand(deviceId, "Input.ExecuteAction", { action: "channeldown" });
               }
               if (method == "Player.SetSpeed" && params == '{"playerid":1,"speed":2}') {
-                sendCommand(deviceId, "Input.ExecuteAction", '{ "action": "channelup"}');
+                sendCommand(deviceId, "Input.ExecuteAction", { action: "channelup" });
               }
             }
             if (!resp[`VideoPlayer.HasMenu`]) {
               if (method == "Input.up") {
-                sendCommand(deviceId, "Player.Seek", '{"value":"bigforward","playerid":1}');
+                sendCommand(deviceId, "Player.Seek", { value: "bigforward", playerid: 1 });
               }
               if (method == "Input.down") {
-                sendCommand(deviceId, "Player.Seek", '{"value":"bigbackward","playerid":1}');
+                sendCommand(deviceId, "Player.Seek", { value: "bigbackward", playerid: 1 });
               }
               if (method == "Input.left") {
-                sendCommand(deviceId, "Player.Seek", '{"value":"smallbackward","playerid":1}');
+                sendCommand(deviceId, "Player.Seek", { value: "smallbackward", playerid: 1 });
               }
               if (method == "Input.right") {
-                sendCommand(deviceId, "Player.Seek", '{"value":"smallforward","playerid":1}');
+                sendCommand(deviceId, "Player.Seek", { value: "smallforward", playerid: 1 });
               }
               if (method == "Input.select") {
                 sendCommand(deviceId, "Input.ShowOSD", "{}");
@@ -395,17 +437,27 @@ function conectedMessage(deviceId) {
     image: images.logo_NEEO_Twitter,
     displaytime: CONNECTED_BANNER_TIME
   };
-  //console.log(`Send KODI notification ${message.message}.`)
-  let x = kodiDB[deviceId].ws;
-  kodiDB[deviceId].ws.send("GUI.ShowNotification", message).catch(e => {
-    disconnected(deviceId, e);
-  });
+  if (kodiReady(deviceId)) {
+    kodiDB[deviceId].ws.send("GUI.ShowNotification", message);
+  }
 }
 
+/////////////////////////////////////////////// REMOVE
 function disconnected(deviceId, error) {
   console.log(`Got an error from KODI with ID "${deviceId}".`);
   console.log(error);
   console.log(`Marking KODI with ID "${deviceId}" as offline.`);
-  clearInterval(kodiDB[deviceId].ping);
   kodiDB[deviceId].reachable = false;
+}
+
+function updateComponent(uniqueDeviceId, component, value) {
+  if (typeof sendComponentUpdate === "function" && typeof uniqueDeviceId === "string" && typeof component === "string" && typeof value !== "undefined") {
+    sendComponentUpdate({
+      uniqueDeviceId: uniqueDeviceId,
+      component: component,
+      value: value
+    }).catch(error => {
+      console.log("[CONTROLLER] Failed to send notification", error.message);
+    });
+  }
 }

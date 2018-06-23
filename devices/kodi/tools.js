@@ -1,12 +1,9 @@
-'use strict';
-const kodiController = require('./kodi-controller');
+"use strict";
 
 module.exports = {
   itemCheck,
   imageToHttp,
   movieTitle,
-  //episodeTitleA,
-  //episodeTitleB,
   isProperMac,
   arrayToString,
   s2j,
@@ -14,23 +11,21 @@ module.exports = {
 };
 
 function itemCheck(x, items) {
-  if (x.limits.total > 0) {
+  if (x.limits && x.limits.total > 0) {
     return items;
   } else {
     return [];
   }
 }
 
-
 function imageToHttp(kodiInstance, uri) {
-  return `http://${kodiInstance.username}:${kodiInstance.password}@${kodiInstance.ip}:${kodiInstance.port}/image/` + encodeURIComponent(uri);
+  return `http://${kodiInstance.ws.username}:${kodiInstance.ws.password}@${kodiInstance.ws.options.host}:${kodiInstance.ws.httpPort}/image/` + encodeURIComponent(uri);
 }
 
 function movieTitle(movie) {
-  const year = ' (' + movie.year + ')' || '';
+  const year = " (" + movie.year + ")" || "";
   return movie.label + year;
 }
-
 
 function episodeTitleB(item) {
   return `${item.season}-${item.episode},  ${item.title}`;
@@ -45,23 +40,22 @@ function isProperMac(mac) {
 }
 
 function arrayToString(arr) {
-  let ret = '';
+  let ret = "";
   for (let i in arr) {
     ret = ret + arr[i];
     if (i + 1 != arr.length) {
-      ret = ret + ', ';
+      ret = ret + ", ";
     }
   }
   return ret;
 }
 
-
 function j2s(json) {
   try {
     return JSON.stringify(json);
   } catch (e) {
-    console.log('ERROR function j2s(json)', e);
-    return 'ERROR function j2s(json)';
+    console.log("ERROR function j2s(json)", e);
+    return "ERROR function j2s(json)";
   }
 }
 
@@ -69,7 +63,7 @@ function s2j(string) {
   try {
     return JSON.parse(string);
   } catch (e) {
-    console.log('ERROR function s2j(string)', e);
+    console.log("ERROR function s2j(string)", e);
     return false;
   }
 }

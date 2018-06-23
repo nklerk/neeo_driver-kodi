@@ -1,10 +1,10 @@
-'use strict';
-const images = require('../images');
-const neeoapi = require('neeo-sdk');
-const kodiController = require('../kodi-controller');
-const tools = require('../tools');
+"use strict";
+const images = require("../images");
+const neeoapi = require("neeo-sdk");
+const kodiController = require("../kodi-controller");
+const tools = require("../tools");
 
-const DEFAULT_PATH = '.';
+const DEFAULT_PATH = ".";
 
 module.exports = {
   browse,
@@ -26,27 +26,28 @@ function browse(devideId, params) {
   };
 
   if (browseIdentifier == "TV Shows") {
-    return kodiController.library.getTVShows(devideId, listOptions.offset, listOptions.limit).then((x) => {
+    return kodiController.library.getTVShows(devideId, listOptions.offset, listOptions.limit).then(x => {
       const listItems = tools.itemCheck(x, x.tvshows);
-      listOptions.total = x.limits.total
+      listOptions.total = x.limits.total;
       return formatList(devideId, listItems, listOptions, "TV Shows");
     });
-
-
   } else if (browseIdentifier == "Recent Episodes") {
-    return kodiController.library.getRecentEpisodes(devideId, listOptions.offset, listOptions.limit).then((x) => {
+    return kodiController.library.getRecentEpisodes(devideId, listOptions.offset, listOptions.limit).then(x => {
       const listItems = tools.itemCheck(x, x.episodes);
-      listOptions.total = x.limits.total
+      listOptions.total = x.limits.total;
       return formatList(devideId, listItems, listOptions, "Recent Episodes");
     });
-
   } else if (browseIdentifier.match(/^tvshowid;[0-9]*;.*$/)) {
-    const browseId = browseIdentifier.split(';');
+    const browseId = browseIdentifier.split(";");
     let id = parseInt(browseId[1], 10);
-    return kodiController.library.getTVshowEpisodes(devideId, id, listOptions.offset, listOptions.limit).then((x) => {
-      const listItems = tools.itemCheck(x, x.episodes);
-      listOptions.total = x.limits.total
-      return formatList(devideId, listItems, listOptions, browseId[2]);
+    return kodiController.library.getTVshowEpisodes(devideId, id, listOptions.offset, listOptions.limit).then(x => {
+      if (x.limits) {
+        const listItems = tools.itemCheck(x, x.episodes);
+        listOptions.total = x.limits.total;
+        return formatList(devideId, listItems, listOptions, browseId[2]);
+      } else {
+        return {};
+      }
     });
 
     //Base Menu
@@ -64,7 +65,7 @@ function formatList(deviceId, listItems, listOptions, title) {
     totalMatchingItems: listItems.length,
     browseIdentifier,
     offset: listOptions.offset,
-    limit: listOptions.limit,
+    limit: listOptions.limit
   };
 
   const list = neeoapi.buildBrowseList(options);
@@ -74,7 +75,7 @@ function formatList(deviceId, listItems, listOptions, title) {
   console.log("listOptions.browseIdentifier:", browseIdentifier);
 
   if (browseIdentifier == "TV Shows") {
-    itemsToAdd.map((item) => {
+    itemsToAdd.map(item => {
       const listItem = {
         title: item.label,
         thumbnailUri: tools.imageToHttp(kodiInstance, item.thumbnail),
@@ -83,7 +84,7 @@ function formatList(deviceId, listItems, listOptions, title) {
       list.addListItem(listItem);
     });
   } else if (browseIdentifier == "Recent Episodes") {
-    itemsToAdd.map((item) => {
+    itemsToAdd.map(item => {
       const listItem = {
         title: item.showtitle,
         label: `S${item.season} E${item.episode},  ${item.title}`,
@@ -93,11 +94,11 @@ function formatList(deviceId, listItems, listOptions, title) {
       list.addListItem(listItem);
     });
   } else {
-    itemsToAdd.map((item) => {
+    itemsToAdd.map(item => {
       const listItem = {
         title: item.title,
         label: `Season: ${item.season}, Episode: ${item.episode}`,
-        thumbnailUri: tools.imageToHttp(kodiInstance, item.art.thumb),
+        thumbnailUri: tools.imageToHttp(kodiInstance, item.art["tvshow.poster"]),
         actionIdentifier: `${item.episodeid}`
       };
       list.addListItem(listItem);
@@ -106,9 +107,7 @@ function formatList(deviceId, listItems, listOptions, title) {
   return list;
 }
 
-
 function baseListMenu(deviceId) {
-
   const options = {
     title: `TV Shows`,
     totalMatchingItems: 2,
@@ -119,7 +118,7 @@ function baseListMenu(deviceId) {
   const list = neeoapi.buildBrowseList(options);
 
   if (kodiController.kodiReady(deviceId)) {
-    list.addListHeader('TV Shows');
+    list.addListHeader("TV Shows");
     list.addListItem({
       title: "TV Shows",
       thumbnailUri: images.icon_tvshow,
@@ -131,7 +130,7 @@ function baseListMenu(deviceId) {
       browseIdentifier: "Recent Episodes"
     });
   } else {
-    list.addListHeader('Kodi is not connected');
+    list.addListHeader("Kodi is not connected");
     list.addListItem({
       title: "Tap to refresh",
       thumbnailUri: images.icon_movie,
