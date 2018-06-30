@@ -2,3 +2,8 @@ node_modules
 install
 test.js
 .git
+Dockerfile
+Dockerfile-org.txt
+avahi-daemon.conf
+docker-compose.yml
+entrypoint.sh

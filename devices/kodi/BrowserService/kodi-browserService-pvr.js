@@ -35,21 +35,21 @@ function browse(devideId, params) {
 
   if (browseIdentifier == "TV Channels") {
     return kodiController.library.getPvrTvChannels(devideId, listOptions.offset, listOptions.limit).then(x => {
-      const listItems = tools.itemCheck(x, x.channels);
-      listOptions.total = x.limits.total;
-      return formatList(devideId, listItems, listOptions, browseIdentifier);
+      const list = tools.itemCheck(x, "channels");
+      listOptions.total = list.total;
+      return formatList(devideId, list.items, listOptions, browseIdentifier);
     });
   } else if (browseIdentifier == "Radio Stations") {
     return kodiController.library.getPvrRadioChannels(devideId, listOptions.offset, listOptions.limit).then(x => {
-      const listItems = tools.itemCheck(x, x.channels);
-      listOptions.total = x.limits.total;
-      return formatList(devideId, listItems, listOptions, browseIdentifier);
+      const list = tools.itemCheck(x, "channels");
+      listOptions.total = list.total;
+      return formatList(devideId, list.items, listOptions, browseIdentifier);
     });
   } else if (browseIdentifier == "Recordings") {
     return kodiController.library.getPvrRecordings(devideId, listOptions.offset, listOptions.limit).then(x => {
-      const listItems = tools.itemCheck(x, x.recordings);
-      listOptions.total = x.limits.total;
-      return formatList(devideId, listItems, listOptions, browseIdentifier);
+      const list = tools.itemCheck(x, "recordings");
+      listOptions.total = list.total;
+      return formatList(devideId, list.items, listOptions, browseIdentifier);
     });
   } else {
     return baseListMenu(devideId);
@@ -59,6 +59,10 @@ function browse(devideId, params) {
 //////////////////////////////////
 // Format Browsing list
 function formatList(deviceId, listItems, listOptions, title) {
+  if (listOptions.total < listOptions.limit) {
+    listOptions.limit = listOptions.total;
+  }
+
   let browseIdentifier = listOptions.browseIdentifier;
 
   const options = {

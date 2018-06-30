@@ -27,24 +27,24 @@ function browse(devideId, params) {
 
   if (browseIdentifier == "TV Shows") {
     return kodiController.library.getTVShows(devideId, listOptions.offset, listOptions.limit).then(x => {
-      const listItems = tools.itemCheck(x, x.tvshows);
-      listOptions.total = x.limits.total;
-      return formatList(devideId, listItems, listOptions, "TV Shows");
+      const list = tools.itemCheck(x, "tvshows");
+      listOptions.total = list.total;
+      return formatList(devideId, list.tems, listOptions, "TV Shows");
     });
   } else if (browseIdentifier == "Recent Episodes") {
     return kodiController.library.getRecentEpisodes(devideId, listOptions.offset, listOptions.limit).then(x => {
-      const listItems = tools.itemCheck(x, x.episodes);
-      listOptions.total = x.limits.total;
-      return formatList(devideId, listItems, listOptions, "Recent Episodes");
+      const list = tools.itemCheck(x, "episodes");
+      listOptions.total = list.total;
+      return formatList(devideId, list.items, listOptions, "Recent Episodes");
     });
   } else if (browseIdentifier.match(/^tvshowid;[0-9]*;.*$/)) {
     const browseId = browseIdentifier.split(";");
     let id = parseInt(browseId[1], 10);
     return kodiController.library.getTVshowEpisodes(devideId, id, listOptions.offset, listOptions.limit).then(x => {
       if (x.limits) {
-        const listItems = tools.itemCheck(x, x.episodes);
-        listOptions.total = x.limits.total;
-        return formatList(devideId, listItems, listOptions, browseId[2]);
+        const list = tools.itemCheck(x, "episodes");
+        listOptions.total = list.total;
+        return formatList(devideId, list.items, listOptions, browseId[2]);
       } else {
         return {};
       }
@@ -59,7 +59,12 @@ function browse(devideId, params) {
 //////////////////////////////////
 // Format Browsing list
 function formatList(deviceId, listItems, listOptions, title) {
+  if (listOptions.total < listOptions.limit) {
+    listOptions.limit = listOptions.total;
+  }
+
   let browseIdentifier = listOptions.browseIdentifier;
+
   const options = {
     title: `Browsing ${title}`,
     totalMatchingItems: listItems.length,

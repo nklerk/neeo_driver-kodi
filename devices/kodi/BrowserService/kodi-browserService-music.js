@@ -35,21 +35,21 @@ function browse(devideId, params) {
 
   if (browseIdentifier == "Albums") {
     return kodiController.library.getAlbums(devideId, listOptions.offset, listOptions.limit).then(x => {
-      const listItems = tools.itemCheck(x, x.albums);
-      listOptions.total = x.limits.total;
-      return formatList(devideId, listItems, listOptions, browseIdentifier);
+      const list = tools.itemCheck(x, "albums");
+      listOptions.total = list.total;
+      return formatList(devideId, list.items, listOptions, browseIdentifier);
     });
   } else if (browseIdentifier == "Recent albums") {
     return kodiController.library.getLatestAlbums(devideId, listOptions.offset, listOptions.limit).then(x => {
-      const listItems = tools.itemCheck(x, x.albums);
-      listOptions.total = x.limits.total;
-      return formatList(devideId, listItems, listOptions, browseIdentifier);
+      const list = tools.itemCheck(x, "albums");
+      listOptions.total = list.total;
+      return formatList(devideId, list.items, listOptions, browseIdentifier);
     });
   } else if (browseIdentifier == "Music Videos") {
     return kodiController.library.getMusicVideos(devideId, listOptions.offset, listOptions.limit).then(x => {
-      const listItems = tools.itemCheck(x, x.musicvideos);
-      listOptions.total = x.limits.total;
-      return formatList(devideId, listItems, listOptions, browseIdentifier);
+      const list = tools.itemCheck(x, "musicvideos");
+      listOptions.total = list.total;
+      return formatList(devideId, list.items, listOptions, browseIdentifier);
     });
   } else if (browseIdentifier.match(/^albumid;[0-9]*;.*$/)) {
     const browseId = browseIdentifier.split(";");
@@ -58,9 +58,9 @@ function browse(devideId, params) {
       listOptions.offset = listOptions.offset - 1; //Fix because 1 item is added to the top for playing the album
     }
     return kodiController.library.getAlbumTracks(devideId, id, listOptions.offset, listOptions.limit).then(x => {
-      const listItems = tools.itemCheck(x, x.songs);
-      listOptions.total = x.limits.total;
-      return formatList(devideId, listItems, listOptions, browseIdentifier);
+      const list = tools.itemCheck(x, "songs");
+      listOptions.total = list.total;
+      return formatList(devideId, list.items, listOptions, browseIdentifier);
     });
 
     //Base Menu
@@ -72,6 +72,10 @@ function browse(devideId, params) {
 //////////////////////////////////
 // Format Browsing list
 function formatList(deviceId, listItems, listOptions, title) {
+  if (listOptions.total < listOptions.limit) {
+    listOptions.limit = listOptions.total;
+  }
+
   let browseIdentifier = listOptions.browseIdentifier;
 
   const options = {

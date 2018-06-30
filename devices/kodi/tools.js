@@ -11,11 +11,14 @@ module.exports = {
 };
 
 function itemCheck(x, items) {
-  if (x.limits && x.limits.total > 0) {
-    return items;
-  } else {
-    return [];
+  let list = {};
+  list.items = [];
+  list.total = 0;
+  if (typeof x != "undefined" && x.limits && x.limits.total > 0) {
+    list.items = x[items];
+    list.total = x.limits.total;
   }
+  return list;
 }
 
 function imageToHttp(kodiInstance, uri) {

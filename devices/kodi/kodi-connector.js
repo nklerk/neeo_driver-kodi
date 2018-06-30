@@ -8,11 +8,13 @@ const images = require("./images");
 let jsonrpcId = 0;
 let sentRequests = [];
 
+const RPC_PORT = 9090;
+
 class Client {
   constructor(mac, host, httpPort, username, password) {
     this.options = {
       host,
-      port: 9090,
+      port: RPC_PORT,
       reconnect: false,
       reconnectSleep: 3000,
       connectionTimeout: 10000,
@@ -157,4 +159,48 @@ function handleKodiEvents(kodi, method, params) {
     kodi.nowPlayingImg = "";
     kodi.events.emit("notification", { mac: kodi.mac, type: "PlayingChanged", title: "", image: images.logo_KODI_tp });
   }
+}
+
+function getMac(host) {
+  return new Promise((resolve, reject) => {
+    let ws = new WebSocket(`ws://${host}:${RPC_PORT}/jsonrpc`);
+    const to = setTimeout(() => {
+      ws.close();
+      reject("Failed to send message. No response within timeout.");
+    }, 5000);
+
+    ws.on("open", () => {
+      sendMacRequest(ws, host);
+    });
+
+    ws.on("message", message => {
+      let data, id, result;
+      try {
+        data = JSON.parse(message);
+        id = data.id;
+        result = data.result["Network.MacAddress"];
+      } catch (error) {
+        console.log("MESSAGE ERROR:", error);
+      }
+      if (id == `MAC${host}`) {
+        if (tools.isProperMac(result)) {
+          ws.close;
+          clearTimeout(to);
+          resolve(result);
+        } else {
+          sendMacRequest(ws, host);
+        }
+      }
+    });
+  });
+}
+module.exports.getMac = getMac;
+
+function sendMacRequest(ws, host) {
+  const getMacContent = { jsonrpc: "2.0", method: "XBMC.GetInfoLabels", params: { labels: ["Network.MacAddress"] }, id: `MAC${host}` };
+  ws.send(JSON.stringify(getMacContent), error => {
+    if (error) {
+      console.log("ERROR getting MAC");
+    }
+  });
 }

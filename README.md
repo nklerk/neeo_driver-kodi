@@ -91,10 +91,19 @@ In Kodi make sure to enable the following settings:
 
 # ToDo:
 
-- change the way the MAC address of a kodi instance is discovered.
 - ability to add credentials.
 
 # Releases
+
+## Version 1.2.1
+
+- Removed Module node-arp, Using native Kodi RPC call.
+- Removed Module node-kodi, Using purpose build websocket connector.
+- Improved discovery time from 8 Seconds to 3.
+- Removed Module request.
+- Bugfix: Recent movies returns actual count to list.
+- Bugfix: list limit could exceed item count.
+- Bugfix: Empty list were cousing an issue.
 
 ## Version 1.2.0
 

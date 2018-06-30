@@ -1,7 +1,6 @@
 "use strict";
 
 const mdns = require("mdns-js");
-const kodirpc = require("./kodi-rpc");
 const images = require("./images");
 const wol = require("./wol");
 const tools = require("./tools");
@@ -25,7 +24,7 @@ const COMMAND_QUEUE_INTERVAL = 3000; //Interval for queueing Power On and Power 
 const COMMAND_QUEUE_TIMEOUTLONG = 300000; //Maximum time for polling initial connection after WOL.
 const CONNECTED_BANNER_TIME = 10000; //Time length the NEEO Logo and connection banner is shown in KODI.
 const MDNS_TIMEOUT = 2000; //Duration per MDNS Discovery scan, after the timer the discovery gets cleaned and avoids memory leaks.
-const NEEO_DRIVER_SEARCH_DELAY = 8000; //Delay before responding on a discovery request. this gives the driver the time to discover, get mac, build RPC etc..
+const NEEO_DRIVER_SEARCH_DELAY = 3000; //Delay before responding on a discovery request. this gives the driver the time to discover, get mac, build RPC etc..
 
 module.exports = {
   discovered,
@@ -99,18 +98,17 @@ function discover() {
     mdnsBrowser = mdns.createBrowser("_xbmc-jsonrpc-h._tcp");
 
     mdnsBrowser.on("ready", function() {
-      console.log("MDNS:  Start");
+      console.log("Discovery:  Start");
       mdnsBrowser.discover();
     });
 
     mdnsBrowser.on("update", function(data) {
       addKoditoDB(data);
-      console.log("MDNS:  responce.");
     });
 
     setTimeout(() => {
       mdnsBrowser.stop();
-      console.log("MDNS:  Stop");
+      console.log("Discovery:  Stop");
     }, MDNS_TIMEOUT);
   }
 }
@@ -123,10 +121,9 @@ function addKoditoDB(discoveredData) {
   const name = discoveredData.fullname.replace(/\._xbmc-jsonrpc-h\._tcp\.local/g, "");
   const username = "kodi"; // Preparation for user pass setting.
   const password = "kodi"; // Preperation for user pass setting.
-  const rpc = kodirpc.build(ip, httpPort, username, password); ///needs to be removed and changed to 9090
 
-  getMacadress(rpc).then(mac => {
-    console.log(`KODIdb:  Discovered KODI instance with IP:${ip}, PORT:${httpPort},MAC:${mac}, NAME:${name}.`);
+  kodiConnector.getMac(ip).then(mac => {
+    console.log(`KODIdb:  Discovered KODI instance with IP:${ip}, PORT:${httpPort}, MAC:${mac}, NAME:${name}.`);
     const ws = new kodiConnector(mac, ip, httpPort, username, password);
     kodiDB[mac] = { name, ip, httpPort, mac, reachable, ws };
 
@@ -265,7 +262,7 @@ function getTVShows(deviceId, offset, limit) {
 function getAlbums(deviceId, offset, limit) {
   if (kodiReady(deviceId)) {
     const end = offset + limit;
-    return kodiDB[deviceId].ws.send("AudioLibrary.GetAlbums", { properties: ["thumbnail", "artist", "albumlabel"], sort: { method: "title", order: "ascending", ignorearticle: true }, limits: { start: offset, end: end } });
+    return kodiDB[deviceId].ws.send("AudioLibrary.GetAlbums", { properties: ["thumbnail", "artist", "albumlabel"], sort: { method: "title", order: "ascending", ignorearticle: false }, limits: { start: offset, end: end } });
   } else {
     return Promise.resolve({});
   }
@@ -283,7 +280,7 @@ function getLatestAlbums(deviceId, offset, limit) {
 function getAlbumTracks(deviceId, id, offset, limit) {
   if (kodiReady(deviceId)) {
     const end = offset + limit;
-    return kodiDB[deviceId].ws.send("AudioLibrary.GetSongs", { properties: ["title", "thumbnail", "artist", "album", "track"], sort: { method: "track", order: "ascending", ignorearticle: true }, filter: { albumid: id }, limits: { start: offset, end: end } });
+    return kodiDB[deviceId].ws.send("AudioLibrary.GetSongs", { properties: ["title", "thumbnail", "artist", "album", "track"], sort: { method: "track", order: "ascending", ignorearticle: false }, filter: { albumid: id }, limits: { start: offset, end: end } });
   } else {
     return Promise.resolve({});
   }
@@ -292,7 +289,7 @@ function getAlbumTracks(deviceId, id, offset, limit) {
 function getMusicVideos(deviceId, offset, limit) {
   if (kodiReady(deviceId)) {
     const end = offset + limit;
-    return kodiDB[deviceId].ws.send("VideoLibrary.GetMusicVideos", { properties: ["title", "thumbnail", "artist"], sort: { method: "track", order: "ascending", ignorearticle: true }, limits: { start: offset, end: end } });
+    return kodiDB[deviceId].ws.send("VideoLibrary.GetMusicVideos", { properties: ["title", "thumbnail", "artist"], sort: { method: "track", order: "ascending", ignorearticle: false }, limits: { start: offset, end: end } });
   } else {
     return Promise.resolve({});
   }

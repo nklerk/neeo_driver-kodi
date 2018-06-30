@@ -29,33 +29,33 @@ function browse(devideId, params) {
   //If Movies
   if (browseIdentifier == "Movies") {
     return kodiController.library.getMovies(devideId, {}, listOptions.offset, listOptions.limit).then(x => {
-      const listItems = tools.itemCheck(x, x.movies);
-      listOptions.total = x.limits.total;
-      return formatList(devideId, listItems, listOptions);
+      const list = tools.itemCheck(x, "movies");
+      listOptions.total = list.total;
+      return formatList(devideId, list.items, listOptions);
     });
 
     //If Recent Movies
   } else if (browseIdentifier == "MoviesUnwatched") {
     return kodiController.library.getMovies(devideId, { field: "playcount", operator: "is", value: "0" }, listOptions.offset, listOptions.limit).then(x => {
-      const listItems = tools.itemCheck(x, x.movies);
-      listOptions.total = x.limits.total;
-      return formatList(devideId, listItems, listOptions);
+      const list = tools.itemCheck(x, "movies");
+      listOptions.total = list.total;
+      return formatList(devideId, list.items, listOptions);
     });
 
     //If Recent Movies
   } else if (browseIdentifier == "MoviesWatched") {
     return kodiController.library.getMovies(devideId, { field: "playcount", operator: "greaterthan", value: "0" }, listOptions.offset, listOptions.limit).then(x => {
-      const listItems = tools.itemCheck(x, x.movies);
-      listOptions.total = x.limits.total;
-      return formatList(devideId, listItems, listOptions);
+      const list = tools.itemCheck(x, "movies");
+      listOptions.total = list.total;
+      return formatList(devideId, list.items, listOptions);
     });
 
     //If Recent Movies
   } else if (browseIdentifier == "Recent Movies") {
     return kodiController.library.getRecentlyAddedMovies(devideId).then(x => {
-      const listItems = tools.itemCheck(x, x.movies);
-      listOptions.total = 30;
-      return formatList(devideId, listItems, listOptions);
+      const list = tools.itemCheck(x, "movies");
+      listOptions.total = list.total;
+      return formatList(devideId, list.items, listOptions);
     });
 
     //Base Menu
@@ -67,7 +67,12 @@ function browse(devideId, params) {
 //////////////////////////////////
 // Format Browsing list
 function formatList(deviceId, listItems, listOptions) {
+  if (listOptions.total < listOptions.limit) {
+    listOptions.limit = listOptions.total;
+  }
+
   let browseIdentifier = listOptions.browseIdentifier;
+
   const options = {
     title: `Browsing ${browseIdentifier}`,
     totalMatchingItems: listOptions.total,
