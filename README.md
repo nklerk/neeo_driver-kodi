@@ -95,6 +95,10 @@ In Kodi make sure to enable the following settings:
 
 # Releases
 
+## Version 1.2.2
+
+- Reconnect when connection is lost.
+
 ## Version 1.2.1
 
 - Removed Module node-arp, Using native Kodi RPC call.

@@ -59,7 +59,7 @@ class Client {
         this.events.emit("closed", { mac: this.mac, eventdata: "Connection closed." });
         if (this.options.reconnect) {
           setTimeout(() => {
-            connect();
+            this.connect();
           }, this.options.reconnectSleep);
         }
       });
@@ -94,8 +94,8 @@ class Client {
 
   send(method, params) {
     return new Promise((resolve, reject) => {
-      if (this.isConnected()) {
-        //this.events.emit("error", { mac: this.mac, eventdata: "Failed to send message. No connection to kodi." });
+      if (!this.isConnected()) {
+        this.connect();
       }
       const message = { jsonrpc: "2.0", method, params, id: (jsonrpcId += 1) };
       this.socket.send(JSON.stringify(message), error => {
@@ -180,7 +180,7 @@ function getMac(host) {
         id = data.id;
         result = data.result["Network.MacAddress"];
       } catch (error) {
-        console.log("MESSAGE ERROR:", error);
+        //console.log("MESSAGE ERROR:", error);
       }
       if (id == `MAC${host}`) {
         if (tools.isProperMac(result)) {
