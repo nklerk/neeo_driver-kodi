@@ -95,6 +95,13 @@ In Kodi make sure to enable the following settings:
 
 # Releases
 
+## Version 1.3.0
+
+- Devices need to be re-added. sorry.
+- Browsing service rewritten.
+- VOLUMESLIDER -> VOLUME
+- Added Player Components.
+
 ## Version 1.2.2
 
 - Reconnect when connection is lost.

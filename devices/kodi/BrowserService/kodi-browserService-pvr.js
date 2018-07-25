@@ -2,7 +2,6 @@
 const images = require("../images");
 const neeoapi = require("neeo-sdk");
 const kodiController = require("../kodi-controller");
-const tools = require("../tools");
 
 const DEFAULT_PATH = ".";
 
@@ -15,12 +14,9 @@ function action(deviceId, actionId) {
   if (actionId.indexOf("channelid") > -1) {
     actionId = actionId.replace("channelid", "");
     kodiController.library.playerOpen(deviceId, { channelid: parseInt(actionId, 10) });
-  } else if (actionId.indexOf("songid") > -1) {
-    actionId = actionId.replace("songid", "");
-    kodiController.library.playerOpen(deviceId, { songid: parseInt(actionId, 10) });
-  } else if (actionId.indexOf("musicvideoid") > -1) {
-    actionId = actionId.replace("musicvideoid", "");
-    kodiController.library.playerOpen(deviceId, { musicvideoid: parseInt(actionId, 10) });
+  } else if (actionId.indexOf("recordingid") > -1) {
+    actionId = actionId.replace("recordingid", "");
+    kodiController.library.playerOpen(deviceId, { recordingid: parseInt(actionId, 10) });
   }
 }
 
@@ -34,22 +30,19 @@ function browse(devideId, params) {
   };
 
   if (browseIdentifier == "TV Channels") {
-    return kodiController.library.getPvrTvChannels(devideId, listOptions.offset, listOptions.limit).then(x => {
-      const list = tools.itemCheck(x, "channels");
-      listOptions.total = list.total;
-      return formatList(devideId, list.items, listOptions, browseIdentifier);
+    return kodiController.library.getPvrTvChannels(devideId, listOptions.offset, listOptions.limit).then(listItems => {
+      listOptions.total = listItems.length;
+      return formatList(listItems, listOptions, browseIdentifier);
     });
   } else if (browseIdentifier == "Radio Stations") {
-    return kodiController.library.getPvrRadioChannels(devideId, listOptions.offset, listOptions.limit).then(x => {
-      const list = tools.itemCheck(x, "channels");
-      listOptions.total = list.total;
-      return formatList(devideId, list.items, listOptions, browseIdentifier);
+    return kodiController.library.getPvrRadioChannels(devideId, listOptions.offset, listOptions.limit).then(listItems => {
+      listOptions.total = listItems.length;
+      return formatList(listItems, listOptions, browseIdentifier);
     });
   } else if (browseIdentifier == "Recordings") {
-    return kodiController.library.getPvrRecordings(devideId, listOptions.offset, listOptions.limit).then(x => {
-      const list = tools.itemCheck(x, "recordings");
-      listOptions.total = list.total;
-      return formatList(devideId, list.items, listOptions, browseIdentifier);
+    return kodiController.library.getPvrRecordings(devideId, listOptions.offset, listOptions.limit).then(listItems => {
+      listOptions.total = listItems.length;
+      return formatList(listItems, listOptions, browseIdentifier);
     });
   } else {
     return baseListMenu(devideId);
@@ -58,7 +51,7 @@ function browse(devideId, params) {
 
 //////////////////////////////////
 // Format Browsing list
-function formatList(deviceId, listItems, listOptions, title) {
+function formatList(listItems, listOptions, title) {
   if (listOptions.total < listOptions.limit) {
     listOptions.limit = listOptions.total;
   }
@@ -69,47 +62,24 @@ function formatList(deviceId, listItems, listOptions, title) {
     title: `Browsing ${title}`,
     totalMatchingItems: listItems.length,
     browseIdentifier,
-    offset: listOptions.offset,
+    offset: listOptions.offset || 0,
     limit: listOptions.limit
   };
 
   const list = neeoapi.buildBrowseList(options);
-  const itemsToAdd = list.prepareItemsAccordingToOffsetAndLimit(listItems);
-  const kodiInstance = kodiController.getKodi(deviceId);
 
   console.log("browseIdentifier:", browseIdentifier);
 
-  if (browseIdentifier == "TV Channels" || browseIdentifier == "Radio Stations") {
-    itemsToAdd.map(item => {
-      if (item.hidden == false) {
-        let broadcastnowTitle = "";
-        if (typeof item.broadcastnow != "undefined" && typeof item.broadcastnow.title != "undefined") {
-          broadcastnowTitle = item.broadcastnow.title;
-        }
-        const listItem = {
-          title: item.label,
-          label: broadcastnowTitle,
-          thumbnailUri: tools.imageToHttp(kodiInstance, item.thumbnail),
-          actionIdentifier: `channelid${item.channelid}`
-        };
-        list.addListItem(listItem);
-      }
-    });
-  } else if (browseIdentifier == "Recordings") {
-    const listItem = {
-      title: item.label,
-      label: broadcastnowTitle,
-      thumbnailUri: tools.imageToHttp(kodiInstance, item.thumbnail),
-      actionIdentifier: `channelid${item.channelid}`
-    };
-    list.addListItem(listItem);
-  }
+  listItems.map(item => {
+    list.addListItem(item);
+  });
+
   return list;
 }
 
 function baseListMenu(deviceId) {
   const options = {
-    title: `Music`,
+    title: `PVR`,
     totalMatchingItems: 2,
     browseIdentifier: ".",
     offset: 0,

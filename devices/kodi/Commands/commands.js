@@ -15,6 +15,8 @@ module.exports.neeoCommands = function() {
     FORWARD: { method: "Player.SetSpeed", params: { playerid: 1, speed: 2 }, cac: true },
     PREVIOUS: { method: "Player.GoTo", params: { playerid: 1, to: "previous" }, cac: false },
     NEXT: { method: "Player.GoTo", params: { playerid: 1, to: "next" }, cac: false },
+    "PREVIOUS TRACK": { method: "Player.GoTo", params: { playerid: 1, to: "previous" }, cac: false },
+    "NEXT TRACK": { method: "Player.GoTo", params: { playerid: 1, to: "next" }, cac: false },
     REVERSE: { method: "Player.SetSpeed", params: { playerid: 1, speed: -2 }, cac: true },
     "PLAY PAUSE TOGGLE": { method: "Input.PlayPause", params: {}, cac: false },
     INFO: { method: "Input.ExecuteAction", params: { action: "info" }, cac: false },

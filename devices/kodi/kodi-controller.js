@@ -48,7 +48,9 @@ module.exports = {
     playerOpen
   },
   getNowPlayingLabel,
+  getNowPlayingDescription,
   getNowPlayingImg,
+  getNowPlaying,
   setVolume,
   getVolume,
   kodiReady,
@@ -144,15 +146,34 @@ function addKoditoDB(discoveredData) {
 }
 
 function handleKodiEvents(x) {
+  console.log(`EVENT_DEBUG: ${x.type}`);
   if (x.type === "VolumeChanged") {
     console.log(`KODI instance ${x.mac} changed volume to ${x.volume}%`);
-    updateComponent(x.mac, "VOLUMESLIDER", x.volume);
-  }
-  if (x.type === "PlayingChanged") {
+    updateComponent(x.mac, "VOLUME", x.volume);
+  } else if (x.type === "PlayingChanged") {
     console.log(`KODI instance ${x.mac} now playing, ${x.title}`);
+    updateComponent(x.mac, "PLAYING", true);
+    updateComponent(x.mac, "COVER_ART_SENSOR", x.image);
+    updateComponent(x.mac, "TITLE_SENSOR", x.title);
+    updateComponent(x.mac, "DESCRIPTION_SENSOR", x.description);
     updateComponent(x.mac, "NOWPLAYINGLABEL", x.title);
     updateComponent(x.mac, "NOWPLAYINGIMGSMALL", x.image);
     updateComponent(x.mac, "NOWPLAYINGIMGLARGE", x.image);
+  } else if (x.type == "PlayingStopped") {
+    console.log(`KODI instance ${x.mac} stoped playing.`);
+    updateComponent(x.mac, "PLAYING", false);
+    updateComponent(x.mac, "COVER_ART_SENSOR", x.image);
+    updateComponent(x.mac, "TITLE_SENSOR", x.title);
+    updateComponent(x.mac, "DESCRIPTION_SENSOR", x.description);
+    updateComponent(x.mac, "NOWPLAYINGLABEL", x.title);
+    updateComponent(x.mac, "NOWPLAYINGIMGSMALL", x.image);
+    updateComponent(x.mac, "NOWPLAYINGIMGLARGE", x.image);
+  } else if (x.type == "PlayingPaused") {
+    console.log(`KODI instance ${x.mac} paused.`);
+    updateComponent(x.mac, "PLAYING", false);
+    updateComponent(x.mac, "DESCRIPTION_SENSOR", x.description);
+  } else {
+    console.log(`KODI instance ${x.mac} Feature TYPE: ${x.type} is not implemented in driver.`);
   }
 }
 
@@ -201,8 +222,23 @@ function kodiReady(deviceID) {
 
 //getRecentlyAddedMovies
 function getRecentlyAddedMovies(deviceId, offset, limit) {
+  const end = offset + limit;
+  const queery = {
+    properties: ["thumbnail", "playcount", "year", "genre"],
+    limits: { start: 0, end: 30 }
+  };
   if (kodiReady(deviceId)) {
-    return kodiDB[deviceId].ws.send("VideoLibrary.GetRecentlyAddedMovies", { properties: ["thumbnail", "playcount", "year", "genre"], limits: { start: 0, end: 30 } });
+    return kodiDB[deviceId].ws.send("VideoLibrary.GetRecentlyAddedMovies", queery).then(x => {
+      const listItems = tools.itemCheck(x, "movies");
+      return listItems.map(item => {
+        return {
+          thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
+          title: `${item.label} (${item.year})`,
+          label: item.genre.join(", "),
+          actionIdentifier: `${item.movieid}`
+        };
+      });
+    });
   } else {
     return Promise.resolve({});
   }
@@ -213,11 +249,30 @@ function getMovies(deviceId, filter, offset, limit) {
     const end = offset + limit;
     let queery = {};
     if (filter.field) {
-      queery = { properties: ["thumbnail", "playcount", "year", "genre"], filter, sort: { order: "ascending", method: "title" }, limits: { start: offset, end: end } };
+      queery = {
+        properties: ["thumbnail", "playcount", "year", "genre"],
+        filter,
+        sort: { order: "ascending", method: "title" },
+        limits: { start: offset, end: end }
+      };
     } else {
-      queery = { properties: ["thumbnail", "playcount", "year", "genre"], sort: { order: "ascending", method: "title" }, limits: { start: offset, end: end } };
+      queery = {
+        properties: ["thumbnail", "playcount", "year", "genre"],
+        sort: { order: "ascending", method: "title" },
+        limits: { start: offset, end: end }
+      };
     }
-    return kodiDB[deviceId].ws.send("VideoLibrary.GetMovies", queery);
+    return kodiDB[deviceId].ws.send("VideoLibrary.GetMovies", queery).then(x => {
+      const listItems = tools.itemCheck(x, "movies");
+      return listItems.map(item => {
+        return {
+          thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
+          title: `${item.label} (${item.year})`,
+          label: item.genre.join(", "),
+          actionIdentifier: `${item.movieid}`
+        };
+      });
+    });
   } else {
     return Promise.resolve({});
   }
@@ -225,7 +280,10 @@ function getMovies(deviceId, filter, offset, limit) {
 
 function GetMovieDetails(deviceId, movieId) {
   if (kodiReady(deviceId)) {
-    return kodiDB[deviceId].ws.send("VideoLibrary.GetMovieDetails", { movieid: movieId, properties: ["thumbnail", "title", "year"] });
+    return kodiDB[deviceId].ws.send("VideoLibrary.GetMovieDetails", {
+      movieid: movieId,
+      properties: ["thumbnail", "title", "year"]
+    });
   } else {
     return Promise.resolve({});
   }
@@ -233,7 +291,22 @@ function GetMovieDetails(deviceId, movieId) {
 
 function getRecentEpisodes(deviceId) {
   if (kodiReady(deviceId)) {
-    return kodiDB[deviceId].ws.send("VideoLibrary.GetEpisodes", { properties: ["title", "showtitle", "season", "episode", "art"], limits: { start: 0, end: 30 }, sort: { order: "descending", method: "dateadded" } });
+    const queery = {
+      properties: ["title", "showtitle", "season", "episode", "art"],
+      limits: { start: 0, end: 30 },
+      sort: { order: "descending", method: "dateadded" }
+    };
+    return kodiDB[deviceId].ws.send("VideoLibrary.GetEpisodes", queery).then(x => {
+      const listItems = tools.itemCheck(x, "episodes");
+      return listItems.map(item => {
+        return {
+          thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.art.thumb),
+          title: `${item.showtitle}`,
+          label: `S${item.season} E${item.episode},  ${item.title}`,
+          actionIdentifier: `${item.episodeid}`
+        };
+      });
+    });
   } else {
     return Promise.resolve({});
   }
@@ -242,8 +315,22 @@ function getRecentEpisodes(deviceId) {
 function getTVshowEpisodes(deviceId, showId, offset, limit) {
   if (kodiReady(deviceId)) {
     const end = offset + limit;
-    let queery = { tvshowid: showId, limits: { start: offset, end: end }, properties: ["title", "season", "episode", "art"] };
-    return kodiDB[deviceId].ws.send("VideoLibrary.GetEpisodes", queery);
+    const queery = {
+      tvshowid: showId,
+      limits: { start: offset, end: end },
+      properties: ["title", "season", "episode", "art", "showtitle"]
+    };
+    return kodiDB[deviceId].ws.send("VideoLibrary.GetEpisodes", queery).then(x => {
+      const listItems = tools.itemCheck(x, "episodes");
+      return listItems.map(item => {
+        return {
+          thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.art.thumb),
+          title: `${item.showtitle}`,
+          label: `S${item.season} E${item.episode},  ${item.title}`,
+          actionIdentifier: `${item.episodeid}`
+        };
+      });
+    });
   } else {
     return Promise.resolve({});
   }
@@ -252,8 +339,22 @@ function getTVshowEpisodes(deviceId, showId, offset, limit) {
 function getTVShows(deviceId, offset, limit) {
   if (kodiReady(deviceId)) {
     const end = offset + limit;
-    let queery = { sort: { order: "ascending", method: "title" }, limits: { start: offset, end: end }, properties: ["thumbnail"] };
-    return kodiDB[deviceId].ws.send("VideoLibrary.GetTVShows", queery);
+    const queery = {
+      sort: { order: "ascending", method: "title" },
+      limits: { start: offset, end: end },
+      properties: ["thumbnail", "year"]
+    };
+    return kodiDB[deviceId].ws.send("VideoLibrary.GetTVShows", queery).then(x => {
+      const listItems = tools.itemCheck(x, "tvshows");
+      return listItems.map(item => {
+        return {
+          thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
+          title: item.label,
+          label: `${item.label} (${item.year})`,
+          browseIdentifier: `tvshowid;${item.tvshowid};${item.label}`
+        };
+      });
+    });
   } else {
     return Promise.resolve({});
   }
@@ -262,7 +363,22 @@ function getTVShows(deviceId, offset, limit) {
 function getAlbums(deviceId, offset, limit) {
   if (kodiReady(deviceId)) {
     const end = offset + limit;
-    return kodiDB[deviceId].ws.send("AudioLibrary.GetAlbums", { properties: ["thumbnail", "artist", "albumlabel"], sort: { method: "title", order: "ascending", ignorearticle: false }, limits: { start: offset, end: end } });
+    const queery = {
+      properties: ["thumbnail", "artist", "albumlabel"],
+      sort: { method: "title", order: "ascending", ignorearticle: false },
+      limits: { start: offset, end: end }
+    };
+    return kodiDB[deviceId].ws.send("AudioLibrary.GetAlbums", queery).then(x => {
+      const listItems = tools.itemCheck(x, "albums");
+      return listItems.map(item => {
+        return {
+          thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
+          title: item.label,
+          label: item.artist.join(", "),
+          browseIdentifier: `albumid;${item.albumid};${item.label}`
+        };
+      });
+    });
   } else {
     return Promise.resolve({});
   }
@@ -271,7 +387,21 @@ function getAlbums(deviceId, offset, limit) {
 function getLatestAlbums(deviceId, offset, limit) {
   if (kodiReady(deviceId)) {
     const end = offset + limit;
-    return kodiDB[deviceId].ws.send("AudioLibrary.GetRecentlyAddedAlbums", { properties: ["thumbnail", "artist", "albumlabel"], limits: { start: offset, end: end } });
+    const queery = {
+      properties: ["thumbnail", "artist", "albumlabel"],
+      limits: { start: offset, end: end }
+    };
+    return kodiDB[deviceId].ws.send("AudioLibrary.GetRecentlyAddedAlbums", queery).then(x => {
+      const listItems = tools.itemCheck(x, "albums");
+      return listItems.map(item => {
+        return {
+          thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
+          title: item.label,
+          label: item.artist.join(", "),
+          browseIdentifier: `albumid;${item.albumid};${item.label}`
+        };
+      });
+    });
   } else {
     return Promise.resolve({});
   }
@@ -280,7 +410,29 @@ function getLatestAlbums(deviceId, offset, limit) {
 function getAlbumTracks(deviceId, id, offset, limit) {
   if (kodiReady(deviceId)) {
     const end = offset + limit;
-    return kodiDB[deviceId].ws.send("AudioLibrary.GetSongs", { properties: ["title", "thumbnail", "artist", "album", "track"], sort: { method: "track", order: "ascending", ignorearticle: false }, filter: { albumid: id }, limits: { start: offset, end: end } });
+    const queery = {
+      properties: ["title", "thumbnail", "artist", "album", "track"],
+      sort: { method: "track", order: "ascending", ignorearticle: false },
+      filter: { albumid: id },
+      limits: { start: offset, end: end }
+    };
+    return kodiDB[deviceId].ws.send("AudioLibrary.GetSongs", queery).then(x => {
+      let listItems = tools.itemCheck(x, "songs");
+      listItems = listItems.map(item => {
+        return {
+          thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
+          title: `${item.track}.  ${item.label}`,
+          label: item.artist.join(", "),
+          actionIdentifier: `songid${item.songid}`
+        };
+      });
+      listItems.unshift({
+        title: "Play Album",
+        thumbnailUri: images.icon_music,
+        actionIdentifier: `albumid${id}`
+      });
+      return listItems;
+    });
   } else {
     return Promise.resolve({});
   }
@@ -289,7 +441,22 @@ function getAlbumTracks(deviceId, id, offset, limit) {
 function getMusicVideos(deviceId, offset, limit) {
   if (kodiReady(deviceId)) {
     const end = offset + limit;
-    return kodiDB[deviceId].ws.send("VideoLibrary.GetMusicVideos", { properties: ["title", "thumbnail", "artist"], sort: { method: "track", order: "ascending", ignorearticle: false }, limits: { start: offset, end: end } });
+    const queery = {
+      properties: ["title", "thumbnail", "artist"],
+      sort: { method: "track", order: "ascending", ignorearticle: false },
+      limits: { start: offset, end: end }
+    };
+    return kodiDB[deviceId].ws.send("VideoLibrary.GetMusicVideos", queery).then(x => {
+      const listItems = tools.itemCheck(x, "musicvideos");
+      return listItems.map(item => {
+        return {
+          thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
+          title: item.title,
+          label: item.artist.join(", "),
+          actionIdentifier: `musicvideoid${item.musicvideoid}`
+        };
+      });
+    });
   } else {
     return Promise.resolve({});
   }
@@ -298,7 +465,26 @@ function getMusicVideos(deviceId, offset, limit) {
 function getPvrRadioChannels(deviceId, offset, limit) {
   if (kodiReady(deviceId)) {
     const end = offset + limit;
-    return kodiDB[deviceId].ws.send("PVR.GetChannels", { channelgroupid: "allradio", properties: ["thumbnail", "channeltype", "hidden", "locked", "channel", "broadcastnow"], limits: { start: offset, end: end } });
+    const queery = {
+      channelgroupid: "allradio",
+      properties: ["thumbnail", "channeltype", "hidden", "locked", "channel", "broadcastnow"],
+      limits: { start: offset, end: end }
+    };
+    return kodiDB[deviceId].ws.send("PVR.GetChannels", queery).then(x => {
+      const listItems = tools.itemCheck(x, "channels");
+      let broadcastnowTitle = "";
+      if (typeof item.broadcastnow != "undefined" && typeof item.broadcastnow.title != "undefined") {
+        broadcastnowTitle = item.broadcastnow.title;
+      }
+      return listItems.map(item => {
+        return {
+          thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
+          title: item.label,
+          label: broadcastnowTitle,
+          actionIdentifier: `channelid${item.channelid}`
+        };
+      });
+    });
   } else {
     return Promise.resolve({});
   }
@@ -307,15 +493,49 @@ function getPvrRadioChannels(deviceId, offset, limit) {
 function getPvrTvChannels(deviceId, offset, limit) {
   if (kodiReady(deviceId)) {
     const end = offset + limit;
-    return kodiDB[deviceId].ws.send("PVR.GetChannels", { channelgroupid: "alltv", properties: ["thumbnail", "channeltype", "hidden", "locked", "channel", "broadcastnow"], limits: { start: offset, end: end } });
+    const queery = {
+      channelgroupid: "alltv",
+      properties: ["thumbnail", "channeltype", "hidden", "locked", "channel", "broadcastnow"],
+      limits: { start: offset, end: end }
+    };
+    return kodiDB[deviceId].ws.send("PVR.GetChannels", queery).then(x => {
+      const listItems = tools.itemCheck(x, "channels");
+      let broadcastnowTitle = "";
+      if (typeof item.broadcastnow != "undefined" && typeof item.broadcastnow.title != "undefined") {
+        broadcastnowTitle = item.broadcastnow.title;
+      }
+      return listItems.map(item => {
+        return {
+          thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
+          title: item.label,
+          label: broadcastnowTitle,
+          actionIdentifier: `channelid${item.channelid}`
+        };
+      });
+    });
   } else {
     return Promise.resolve({});
   }
 }
 
-function getPvrRecordings(deviceId) {
+function getPvrRecordings(deviceId, offset, limit) {
   if (kodiReady(deviceId)) {
-    return kodiDB[deviceId].ws.send("PVR.GetRecordings", { properties: ["title", "starttime", "endtime", "art"] });
+    const end = offset + limit;
+    const queery = {
+      properties: ["title", "starttime", "endtime", "art"],
+      limits: { start: offset, end: end }
+    };
+    return kodiDB[deviceId].ws.send("PVR.GetRecordings", queery).then(x => {
+      const listItems = tools.itemCheck(x, "recordings");
+      return listItems.map(item => {
+        return {
+          thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.title),
+          title: item.title,
+          label: item.label,
+          actionIdentifier: `recordingid${item.recordingid}`
+        };
+      });
+    });
   } else {
     return Promise.resolve({});
   }
@@ -329,9 +549,25 @@ function getNowPlayingImg(deviceId) {
   }
 }
 
+function getNowPlaying(deviceId) {
+  if (kodiReady(deviceId)) {
+    return kodiDB[deviceId].ws.nowPlaying;
+  } else {
+    return images.logo_KODI_tp;
+  }
+}
+
 function getNowPlayingLabel(deviceId) {
   if (kodiReady(deviceId)) {
     return kodiDB[deviceId].ws.nowPlayingLabel;
+  } else {
+    return "";
+  }
+}
+
+function getNowPlayingDescription(deviceId) {
+  if (kodiReady(deviceId)) {
+    return kodiDB[deviceId].ws.nowPlayingDescription;
   } else {
     return "";
   }
@@ -390,39 +626,63 @@ function sendContentAwareCommand(deviceId, method, params) {
   sendCommand(deviceId, method, params); //Is allways send, checked official kodi remote app.
   if (kodiReady(deviceId)) {
     if (method == "Input.right" || method == "Input.left" || method == "Input.down" || method == "Input.up" || method == "Input.select" || method == "Player.SetSpeed") {
-      kodiDB[deviceId].ws.send("GUI.GetProperties", { properties: ["currentwindow", "fullscreen"] }).then(window => {
-        if (window.currentwindow.label == "Fullscreen video") {
-          kodiDB[deviceId].ws.send("XBMC.GetInfoBooleans", { booleans: ["VideoPlayer.HasMenu", "Pvr.IsPlayingTv"] }).then(resp => {
-            console.log("CAC HasMenu:", resp["VideoPlayer.HasMenu"]);
-            console.log("CAC IsPlayingTv:", resp[`Pvr.IsPlayingTv`]);
-            if (resp[`Pvr.IsPlayingTv`]) {
-              if (method == "Player.SetSpeed" && params == '{"playerid":1,"speed":-2}') {
-                sendCommand(deviceId, "Input.ExecuteAction", { action: "channeldown" });
-              }
-              if (method == "Player.SetSpeed" && params == '{"playerid":1,"speed":2}') {
-                sendCommand(deviceId, "Input.ExecuteAction", { action: "channelup" });
-              }
-            }
-            if (!resp[`VideoPlayer.HasMenu`]) {
-              if (method == "Input.up") {
-                sendCommand(deviceId, "Player.Seek", { value: "bigforward", playerid: 1 });
-              }
-              if (method == "Input.down") {
-                sendCommand(deviceId, "Player.Seek", { value: "bigbackward", playerid: 1 });
-              }
-              if (method == "Input.left") {
-                sendCommand(deviceId, "Player.Seek", { value: "smallbackward", playerid: 1 });
-              }
-              if (method == "Input.right") {
-                sendCommand(deviceId, "Player.Seek", { value: "smallforward", playerid: 1 });
-              }
-              if (method == "Input.select") {
-                sendCommand(deviceId, "Input.ShowOSD", "{}");
-              }
-            } //if (!resp.VideoPlayer.HasMenu){
-          }); // RPC XBMC.GetInfoBooleans
-        } // if (window.fullscreen)else do nothing
-      }); // Get getProperties currentwindow
+      kodiDB[deviceId].ws
+        .send("GUI.GetProperties", {
+          properties: ["currentwindow", "fullscreen"]
+        })
+        .then(window => {
+          if (window.currentwindow.label == "Fullscreen video") {
+            kodiDB[deviceId].ws
+              .send("XBMC.GetInfoBooleans", {
+                booleans: ["VideoPlayer.HasMenu", "Pvr.IsPlayingTv"]
+              })
+              .then(resp => {
+                console.log("CAC HasMenu:", resp["VideoPlayer.HasMenu"]);
+                console.log("CAC IsPlayingTv:", resp[`Pvr.IsPlayingTv`]);
+                if (resp[`Pvr.IsPlayingTv`]) {
+                  if (method == "Player.SetSpeed" && params == '{"playerid":1,"speed":-2}') {
+                    sendCommand(deviceId, "Input.ExecuteAction", {
+                      action: "channeldown"
+                    });
+                  }
+                  if (method == "Player.SetSpeed" && params == '{"playerid":1,"speed":2}') {
+                    sendCommand(deviceId, "Input.ExecuteAction", {
+                      action: "channelup"
+                    });
+                  }
+                }
+                if (!resp[`VideoPlayer.HasMenu`]) {
+                  if (method == "Input.up") {
+                    sendCommand(deviceId, "Player.Seek", {
+                      value: "bigforward",
+                      playerid: 1
+                    });
+                  }
+                  if (method == "Input.down") {
+                    sendCommand(deviceId, "Player.Seek", {
+                      value: "bigbackward",
+                      playerid: 1
+                    });
+                  }
+                  if (method == "Input.left") {
+                    sendCommand(deviceId, "Player.Seek", {
+                      value: "smallbackward",
+                      playerid: 1
+                    });
+                  }
+                  if (method == "Input.right") {
+                    sendCommand(deviceId, "Player.Seek", {
+                      value: "smallforward",
+                      playerid: 1
+                    });
+                  }
+                  if (method == "Input.select") {
+                    sendCommand(deviceId, "Input.ShowOSD", "{}");
+                  }
+                } //if (!resp.VideoPlayer.HasMenu){
+              }); // RPC XBMC.GetInfoBooleans
+          } // if (window.fullscreen)else do nothing
+        }); // Get getProperties currentwindow
     } // if input Input.right ++
   } // If Kodi is ready
 } // function

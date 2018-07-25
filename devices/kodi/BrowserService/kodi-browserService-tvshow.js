@@ -26,30 +26,22 @@ function browse(devideId, params) {
   };
 
   if (browseIdentifier == "TV Shows") {
-    return kodiController.library.getTVShows(devideId, listOptions.offset, listOptions.limit).then(x => {
-      const list = tools.itemCheck(x, "tvshows");
-      listOptions.total = list.total;
-      return formatList(devideId, list.tems, listOptions, "TV Shows");
+    return kodiController.library.getTVShows(devideId, listOptions.offset, listOptions.limit).then(listItems => {
+      listOptions.total = listItems.length;
+      return formatList(listItems, listOptions, browseIdentifier);
     });
   } else if (browseIdentifier == "Recent Episodes") {
-    return kodiController.library.getRecentEpisodes(devideId, listOptions.offset, listOptions.limit).then(x => {
-      const list = tools.itemCheck(x, "episodes");
-      listOptions.total = list.total;
-      return formatList(devideId, list.items, listOptions, "Recent Episodes");
+    return kodiController.library.getRecentEpisodes(devideId, listOptions.offset, listOptions.limit).then(listItems => {
+      listOptions.total = listItems.length;
+      return formatList(listItems, listOptions, browseIdentifier);
     });
   } else if (browseIdentifier.match(/^tvshowid;[0-9]*;.*$/)) {
     const browseId = browseIdentifier.split(";");
     let id = parseInt(browseId[1], 10);
-    return kodiController.library.getTVshowEpisodes(devideId, id, listOptions.offset, listOptions.limit).then(x => {
-      if (x.limits) {
-        const list = tools.itemCheck(x, "episodes");
-        listOptions.total = list.total;
-        return formatList(devideId, list.items, listOptions, browseId[2]);
-      } else {
-        return {};
-      }
+    return kodiController.library.getTVshowEpisodes(devideId, id, listOptions.offset, listOptions.limit).then(listItems => {
+      listOptions.total = listItems.length;
+      return formatList(listItems, listOptions, browseId[2]);
     });
-
     //Base Menu
   } else {
     return baseListMenu(devideId);
@@ -58,7 +50,7 @@ function browse(devideId, params) {
 
 //////////////////////////////////
 // Format Browsing list
-function formatList(deviceId, listItems, listOptions, title) {
+function formatList(listItems, listOptions, title) {
   if (listOptions.total < listOptions.limit) {
     listOptions.limit = listOptions.total;
   }
@@ -69,46 +61,18 @@ function formatList(deviceId, listItems, listOptions, title) {
     title: `Browsing ${title}`,
     totalMatchingItems: listItems.length,
     browseIdentifier,
-    offset: listOptions.offset,
+    offset: listOptions.offset || 0,
     limit: listOptions.limit
   };
 
   const list = neeoapi.buildBrowseList(options);
-  const itemsToAdd = list.prepareItemsAccordingToOffsetAndLimit(listItems);
-  const kodiInstance = kodiController.getKodi(deviceId);
 
-  console.log("listOptions.browseIdentifier:", browseIdentifier);
+  console.log("browseIdentifier:", browseIdentifier);
 
-  if (browseIdentifier == "TV Shows") {
-    itemsToAdd.map(item => {
-      const listItem = {
-        title: item.label,
-        thumbnailUri: tools.imageToHttp(kodiInstance, item.thumbnail),
-        browseIdentifier: `tvshowid;${item.tvshowid};${item.label}`
-      };
-      list.addListItem(listItem);
-    });
-  } else if (browseIdentifier == "Recent Episodes") {
-    itemsToAdd.map(item => {
-      const listItem = {
-        title: item.showtitle,
-        label: `S${item.season} E${item.episode},  ${item.title}`,
-        thumbnailUri: tools.imageToHttp(kodiInstance, item.art.thumb),
-        actionIdentifier: `${item.episodeid}`
-      };
-      list.addListItem(listItem);
-    });
-  } else {
-    itemsToAdd.map(item => {
-      const listItem = {
-        title: item.title,
-        label: `Season: ${item.season}, Episode: ${item.episode}`,
-        thumbnailUri: tools.imageToHttp(kodiInstance, item.art["tvshow.poster"]),
-        actionIdentifier: `${item.episodeid}`
-      };
-      list.addListItem(listItem);
-    });
-  }
+  listItems.map(item => {
+    list.addListItem(item);
+  });
+
   return list;
 }
 

@@ -2,7 +2,6 @@
 const images = require("../images");
 const neeoapi = require("neeo-sdk");
 const kodiController = require("../kodi-controller");
-const tools = require("../tools");
 
 const DEFAULT_PATH = ".";
 
@@ -17,45 +16,41 @@ function action(deviceId, movieId) {
 }
 
 function browse(devideId, params) {
-  let browseIdentifier = params.browseIdentifier || DEFAULT_PATH;
+  const browseIdentifier = params.browseIdentifier || DEFAULT_PATH;
+  console.log("BROWSEING", browseIdentifier);
+
   const listOptions = {
     limit: params.limit || 64,
     offset: params.offset || 0,
     browseIdentifier
   };
 
-  console.log("listOptions.offset", listOptions.offset);
-
   //If Movies
   if (browseIdentifier == "Movies") {
-    return kodiController.library.getMovies(devideId, {}, listOptions.offset, listOptions.limit).then(x => {
-      const list = tools.itemCheck(x, "movies");
-      listOptions.total = list.total;
-      return formatList(devideId, list.items, listOptions);
+    return kodiController.library.getMovies(devideId, {}, listOptions.offset, listOptions.limit).then(listItems => {
+      listOptions.total = listItems.length;
+      return formatList(listItems, listOptions, browseIdentifier);
     });
 
     //If Recent Movies
   } else if (browseIdentifier == "MoviesUnwatched") {
-    return kodiController.library.getMovies(devideId, { field: "playcount", operator: "is", value: "0" }, listOptions.offset, listOptions.limit).then(x => {
-      const list = tools.itemCheck(x, "movies");
-      listOptions.total = list.total;
-      return formatList(devideId, list.items, listOptions);
+    return kodiController.library.getMovies(devideId, { field: "playcount", operator: "is", value: "0" }, listOptions.offset, listOptions.limit).then(listItems => {
+      listOptions.total = listItems.length;
+      return formatList(listItems, listOptions, browseIdentifier);
     });
 
     //If Recent Movies
   } else if (browseIdentifier == "MoviesWatched") {
-    return kodiController.library.getMovies(devideId, { field: "playcount", operator: "greaterthan", value: "0" }, listOptions.offset, listOptions.limit).then(x => {
-      const list = tools.itemCheck(x, "movies");
-      listOptions.total = list.total;
-      return formatList(devideId, list.items, listOptions);
+    return kodiController.library.getMovies(devideId, { field: "playcount", operator: "greaterthan", value: "0" }, listOptions.offset, listOptions.limit).then(listItems => {
+      listOptions.total = listItems.length;
+      return formatList(listItems, listOptions, browseIdentifier);
     });
 
     //If Recent Movies
   } else if (browseIdentifier == "Recent Movies") {
-    return kodiController.library.getRecentlyAddedMovies(devideId).then(x => {
-      const list = tools.itemCheck(x, "movies");
-      listOptions.total = list.total;
-      return formatList(devideId, list.items, listOptions);
+    return kodiController.library.getRecentlyAddedMovies(devideId).then(listItems => {
+      listOptions.total = listItems.length;
+      return formatList(listItems, listOptions, browseIdentifier);
     });
 
     //Base Menu
@@ -66,7 +61,7 @@ function browse(devideId, params) {
 
 //////////////////////////////////
 // Format Browsing list
-function formatList(deviceId, listItems, listOptions) {
+function formatList(listItems, listOptions, title) {
   if (listOptions.total < listOptions.limit) {
     listOptions.limit = listOptions.total;
   }
@@ -74,28 +69,21 @@ function formatList(deviceId, listItems, listOptions) {
   let browseIdentifier = listOptions.browseIdentifier;
 
   const options = {
-    title: `Browsing ${browseIdentifier}`,
-    totalMatchingItems: listOptions.total,
+    title: `Browsing ${title}`,
+    totalMatchingItems: listItems.length,
     browseIdentifier,
-    offset: listOptions.offset,
+    offset: listOptions.offset || 0,
     limit: listOptions.limit
   };
 
   const list = neeoapi.buildBrowseList(options);
-  const itemsToAdd = listItems;
-  const kodiInstance = kodiController.getKodi(deviceId);
 
   console.log("browseIdentifier:", browseIdentifier);
 
-  itemsToAdd.map(item => {
-    const listItem = {
-      title: tools.movieTitle(item),
-      label: tools.arrayToString(item.genre),
-      thumbnailUri: tools.imageToHttp(kodiInstance, item.thumbnail),
-      actionIdentifier: `${item.movieid}`
-    };
-    list.addListItem(listItem);
+  listItems.map(item => {
+    list.addListItem(item);
   });
+
   return list;
 }
 

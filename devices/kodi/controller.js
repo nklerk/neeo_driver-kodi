@@ -7,13 +7,13 @@ const browserServiceTVShow = require("./BrowserService/kodi-browserService-tvsho
 const browserServicePVR = require("./BrowserService/kodi-browserService-pvr");
 const kodiController = require("./kodi-controller");
 
-function onButtonPressed(name, deviceid) {
-  console.log("Button pressed:", deviceid, name);
+function onButtonPressed(name, deviceId) {
+  console.log("Button pressed:", deviceId, name);
   const cmd = commands.neeoCommands()[name];
   if (cmd.cac) {
-    kodiController.sendContentAwareCommand(deviceid, cmd.method, cmd.params);
+    kodiController.sendContentAwareCommand(deviceId, cmd.method, cmd.params);
   } else {
-    kodiController.sendCommand(deviceid, cmd.method, cmd.params);
+    kodiController.sendCommand(deviceId, cmd.method, cmd.params);
   }
 }
 
@@ -86,8 +86,45 @@ function nowPlayingLabel(deviceId) {
   return kodiController.getNowPlayingLabel(deviceId);
 }
 
+function nowPlayingDescription(deviceId) {
+  return kodiController.getNowPlayingDescription(deviceId);
+}
+
 function nowPlayingImg(deviceId) {
   return kodiController.getNowPlayingImg(deviceId);
+}
+
+function playSwitchGetter(deviceId) {
+  return kodiController.getNowPlaying(deviceId);
+}
+function playSwitchSetter(deviceId, value) {
+  console.log("playSwitchSetter", deviceId, value);
+  if (value) {
+    kodiController.sendCommand(deviceId, "Input.ExecuteAction", { action: "play" });
+  } else {
+    kodiController.sendCommand(deviceId, "Input.ExecuteAction", { action: "pause" });
+  }
+}
+
+function muteSwitchGetter(deviceId) {
+  return false;
+}
+function muteSwitchSetter(deviceId, value) {
+  console.log("muteSwitchSetter", deviceId, value);
+}
+
+function shuffleSwitchGetter(deviceId) {
+  return false;
+}
+function shuffleSwitchSetter(deviceId, value) {
+  console.log("shuffleSwitchSetter", deviceId, value);
+}
+
+function repeatSwitchGetter(deviceId) {
+  return false;
+}
+function repeatSwitchSetter(deviceId, value) {
+  console.log("repeatSwitchSetter", deviceId, value);
 }
 
 module.exports = {
@@ -95,6 +132,34 @@ module.exports = {
   volume: {
     get: volumeGet,
     set: volumeSet
+  },
+  playSwitch: {
+    getter: playSwitchGetter,
+    setter: playSwitchSetter
+  },
+  muteSwitch: {
+    getter: muteSwitchGetter,
+    setter: muteSwitchSetter
+  },
+  shuffleSwitch: {
+    getter: shuffleSwitchGetter,
+    setter: shuffleSwitchSetter
+  },
+  repeatSwitch: {
+    getter: repeatSwitchGetter,
+    setter: repeatSwitchSetter
+  },
+  coverArtSensor: {
+    getter: nowPlayingImg,
+    setter: nowPlayingImg
+  },
+  titleSensor: {
+    getter: nowPlayingLabel,
+    setter: nowPlayingLabel
+  },
+  descriptionSensor: {
+    getter: nowPlayingDescription,
+    setter: nowPlayingDescription
   },
   nowPlayingLabel,
   nowPlayingImg,

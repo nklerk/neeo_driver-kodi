@@ -2,7 +2,6 @@
 const images = require("../images");
 const neeoapi = require("neeo-sdk");
 const kodiController = require("../kodi-controller");
-const tools = require("../tools");
 
 const DEFAULT_PATH = ".";
 
@@ -27,6 +26,7 @@ function action(deviceId, actionId) {
 function browse(devideId, params) {
   const browseIdentifier = params.browseIdentifier || DEFAULT_PATH;
   console.log("BROWSEING", browseIdentifier);
+
   const listOptions = {
     limit: params.limit || 64,
     offset: params.offset || 0,
@@ -34,33 +34,30 @@ function browse(devideId, params) {
   };
 
   if (browseIdentifier == "Albums") {
-    return kodiController.library.getAlbums(devideId, listOptions.offset, listOptions.limit).then(x => {
-      const list = tools.itemCheck(x, "albums");
-      listOptions.total = list.total;
-      return formatList(devideId, list.items, listOptions, browseIdentifier);
+    return kodiController.library.getAlbums(devideId, listOptions.offset, listOptions.limit).then(listItems => {
+      listOptions.total = listItems.length;
+      return formatList(listItems, listOptions, browseIdentifier);
     });
   } else if (browseIdentifier == "Recent albums") {
-    return kodiController.library.getLatestAlbums(devideId, listOptions.offset, listOptions.limit).then(x => {
-      const list = tools.itemCheck(x, "albums");
-      listOptions.total = list.total;
-      return formatList(devideId, list.items, listOptions, browseIdentifier);
+    return kodiController.library.getLatestAlbums(devideId, listOptions.offset, listOptions.limit).then(listItems => {
+      listOptions.total = listItems.length;
+      return formatList(listItems, listOptions, browseIdentifier);
     });
   } else if (browseIdentifier == "Music Videos") {
-    return kodiController.library.getMusicVideos(devideId, listOptions.offset, listOptions.limit).then(x => {
-      const list = tools.itemCheck(x, "musicvideos");
-      listOptions.total = list.total;
-      return formatList(devideId, list.items, listOptions, browseIdentifier);
+    return kodiController.library.getMusicVideos(devideId, listOptions.offset, listOptions.limit).then(listItems => {
+      listOptions.total = listItems.length;
+      return formatList(listItems, listOptions, browseIdentifier);
     });
   } else if (browseIdentifier.match(/^albumid;[0-9]*;.*$/)) {
     const browseId = browseIdentifier.split(";");
+    const albumTitle = browseId[2];
     let id = parseInt(browseId[1], 10);
     if (listOptions.offset > 0) {
       listOptions.offset = listOptions.offset - 1; //Fix because 1 item is added to the top for playing the album
     }
-    return kodiController.library.getAlbumTracks(devideId, id, listOptions.offset, listOptions.limit).then(x => {
-      const list = tools.itemCheck(x, "songs");
-      listOptions.total = list.total;
-      return formatList(devideId, list.items, listOptions, browseIdentifier);
+    return kodiController.library.getAlbumTracks(devideId, id, listOptions.offset, listOptions.limit).then(listItems => {
+      listOptions.total = listItems.length;
+      return formatList(listItems, listOptions, albumTitle);
     });
 
     //Base Menu
@@ -71,7 +68,7 @@ function browse(devideId, params) {
 
 //////////////////////////////////
 // Format Browsing list
-function formatList(deviceId, listItems, listOptions, title) {
+function formatList(listItems, listOptions, title) {
   if (listOptions.total < listOptions.limit) {
     listOptions.limit = listOptions.total;
   }
@@ -87,47 +84,13 @@ function formatList(deviceId, listItems, listOptions, title) {
   };
 
   const list = neeoapi.buildBrowseList(options);
-  const itemsToAdd = list.prepareItemsAccordingToOffsetAndLimit(listItems);
-  const kodiInstance = kodiController.getKodi(deviceId);
 
   console.log("browseIdentifier:", browseIdentifier);
 
-  if (browseIdentifier == "Albums" || browseIdentifier == "Recent albums") {
-    itemsToAdd.map(item => {
-      const listItem = {
-        title: item.label,
-        label: tools.arrayToString(item.artist),
-        thumbnailUri: tools.imageToHttp(kodiInstance, item.thumbnail),
-        browseIdentifier: `albumid;${item.albumid};${item.label}`
-      };
-      list.addListItem(listItem);
-    });
-  } else if (browseIdentifier == "Music Videos") {
-    itemsToAdd.map(item => {
-      const listItem = {
-        title: item.label,
-        label: tools.arrayToString(item.artist),
-        thumbnailUri: tools.imageToHttp(kodiInstance, item.thumbnail),
-        actionIdentifier: `musicvideoid${item.musicvideoid}`
-      };
-      list.addListItem(listItem);
-    });
-  } else if (browseIdentifier.match(/^albumid;[0-9]*;.*$/)) {
-    const browseId = browseIdentifier.split(";");
-    let albumid = parseInt(browseId[1], 10);
-    if (options.offset == 0) {
-      list.addListItem({ title: "Play Album", thumbnailUri: images.icon_music, actionIdentifier: `albumid${albumid}` });
-    }
-    itemsToAdd.map(item => {
-      const listItem = {
-        title: `${item.track}, ${item.label}`,
-        label: tools.arrayToString(item.artist),
-        thumbnailUri: tools.imageToHttp(kodiInstance, item.thumbnail),
-        actionIdentifier: `songid${item.songid}`
-      };
-      list.addListItem(listItem);
-    });
-  }
+  listItems.map(item => {
+    list.addListItem(item);
+  });
+
   return list;
 }
 
