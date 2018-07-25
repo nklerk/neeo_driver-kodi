@@ -95,6 +95,10 @@ In Kodi make sure to enable the following settings:
 
 # Releases
 
+## Version 1.3.1
+
+- rewriting browsing service for Player
+
 ## Version 1.3.0
 
 - Devices need to be re-added. sorry.
