@@ -55,8 +55,8 @@ function buildKodiPlayerDriver() {
   kodiDriver.setManufacturer("KODI");
   kodiDriver.addAdditionalSearchToken("XBMC");
   kodiDriver.setType("MEDIAPLAYER");
-  kodiDriver.addRootDirectory({ name: "PLAYER_ROOT_DIRECTORY", label: "ROOT" }, controller.movieLibrary);
-  kodiDriver.addQueueDirectory({ name: "PLAYER_QUEUE_DIRECTORY", label: "QUEUE" }, controller.movieLibrary);
+  kodiDriver.addRootDirectory({ name: "PLAYER_ROOT_DIRECTORY", label: "ROOT" }, controller.library);
+  kodiDriver.addQueueDirectory({ name: "PLAYER_QUEUE_DIRECTORY", label: "QUEUE" }, controller.library);
   kodiDriver.addDirectory({ name: "MOVIE LIBRARY", label: "MOVIE LIBRARY" }, controller.movieLibrary);
   kodiDriver.addDirectory({ name: "MUSIC LIBRARY", label: "MUSIC LIBRARY" }, controller.musicLibrary);
   kodiDriver.addDirectory({ name: "TV SHOW LIBRARY", label: "TV SHOW LIBRARY" }, controller.tvshowLibrary);

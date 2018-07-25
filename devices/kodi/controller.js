@@ -5,6 +5,7 @@ const browserServiceMovies = require("./BrowserService/kodi-browserService-movie
 const browserServiceMusic = require("./BrowserService/kodi-browserService-music");
 const browserServiceTVShow = require("./BrowserService/kodi-browserService-tvshow");
 const browserServicePVR = require("./BrowserService/kodi-browserService-pvr");
+const browserService = require("./BrowserService/kodi-browserService");
 const kodiController = require("./kodi-controller");
 
 function onButtonPressed(name, deviceId) {
@@ -15,6 +16,16 @@ function onButtonPressed(name, deviceId) {
   } else {
     kodiController.sendCommand(deviceId, cmd.method, cmd.params);
   }
+}
+
+//root
+
+function libraryGetter(deviceId, params) {
+  return browserService.browse(deviceId, params);
+}
+
+function libraryAction(deviceId, params) {
+  browserService.action(deviceId, params.actionIdentifier);
 }
 
 // Movies
@@ -163,6 +174,10 @@ module.exports = {
   },
   nowPlayingLabel,
   nowPlayingImg,
+  library: {
+    getter: libraryGetter,
+    action: libraryAction
+  },
   movieLibrary: {
     getter: movieLibraryGetter,
     action: movieLibraryAction

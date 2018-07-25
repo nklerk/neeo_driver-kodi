@@ -143,7 +143,7 @@ function handleKodiEvents(kodi, method, params) {
       kodi.events.emit("notification", { mac: kodi.mac, type: "PlayingChanged", title: kodi.nowPlayingLabel, description: kodi.nowPlayingDescription, image: kodi.nowPlayingImg });
     });
   } else if (method === "Player.OnPlay" && params.data.item.type === "song") {
-    kodi.send("Player.GetItem", { playerid: params.data.player.playerid, properties: ["thumbnail", "title", "artist"] }).then(y => {
+    kodi.send("Player.GetItem", { playerid: params.data.player.playerid, properties: ["thumbnail", "title", "artist", "track"] }).then(y => {
       kodi.nowPlaying = true;
       kodi.nowPlayingLabel = `${y.item.track}.  ${y.item.label}`;
       kodi.nowPlayingDescription = y.item.artist.join(", ");

@@ -235,7 +235,7 @@ function getRecentlyAddedMovies(deviceId, offset, limit) {
           thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
           title: `${item.label} (${item.year})`,
           label: item.genre.join(", "),
-          actionIdentifier: `${item.movieid}`
+          actionIdentifier: `movieid;${item.movieid}`
         };
       });
     });
@@ -269,7 +269,7 @@ function getMovies(deviceId, filter, offset, limit) {
           thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
           title: `${item.label} (${item.year})`,
           label: item.genre.join(", "),
-          actionIdentifier: `${item.movieid}`
+          actionIdentifier: `movieid;${item.movieid}`
         };
       });
     });
@@ -303,7 +303,7 @@ function getRecentEpisodes(deviceId) {
           thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.art.thumb),
           title: `${item.showtitle}`,
           label: `S${item.season} E${item.episode},  ${item.title}`,
-          actionIdentifier: `${item.episodeid}`
+          actionIdentifier: `episodeid;${item.episodeid}`
         };
       });
     });
@@ -327,7 +327,7 @@ function getTVshowEpisodes(deviceId, showId, offset, limit) {
           thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.art.thumb),
           title: `${item.showtitle}`,
           label: `S${item.season} E${item.episode},  ${item.title}`,
-          actionIdentifier: `${item.episodeid}`
+          actionIdentifier: `episodeid;${item.episodeid}`
         };
       });
     });
@@ -423,13 +423,13 @@ function getAlbumTracks(deviceId, id, offset, limit) {
           thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
           title: `${item.track}.  ${item.label}`,
           label: item.artist.join(", "),
-          actionIdentifier: `songid${item.songid}`
+          actionIdentifier: `songid;${item.songid}`
         };
       });
       listItems.unshift({
         title: "Play Album",
         thumbnailUri: images.icon_music,
-        actionIdentifier: `albumid${id}`
+        actionIdentifier: `albumid;${id}`
       });
       return listItems;
     });
@@ -453,7 +453,7 @@ function getMusicVideos(deviceId, offset, limit) {
           thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
           title: item.title,
           label: item.artist.join(", "),
-          actionIdentifier: `musicvideoid${item.musicvideoid}`
+          actionIdentifier: `musicvideoid;${item.musicvideoid}`
         };
       });
     });
@@ -481,7 +481,7 @@ function getPvrRadioChannels(deviceId, offset, limit) {
           thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
           title: item.label,
           label: broadcastnowTitle,
-          actionIdentifier: `channelid${item.channelid}`
+          actionIdentifier: `channelid;${item.channelid}`
         };
       });
     });
@@ -509,7 +509,7 @@ function getPvrTvChannels(deviceId, offset, limit) {
           thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
           title: item.label,
           label: broadcastnowTitle,
-          actionIdentifier: `channelid${item.channelid}`
+          actionIdentifier: `channelid;${item.channelid}`
         };
       });
     });
@@ -532,7 +532,7 @@ function getPvrRecordings(deviceId, offset, limit) {
           thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.title),
           title: item.title,
           label: item.label,
-          actionIdentifier: `recordingid${item.recordingid}`
+          actionIdentifier: `recordingid;${item.recordingid}`
         };
       });
     });
