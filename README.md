@@ -95,6 +95,11 @@ In Kodi make sure to enable the following settings:
 
 # Releases
 
+## Version 1.3.2
+
+- Fixed lists limited to 64 items.
+- Added PLAY PAUSE button for handeling play pause in Player, is mapped to OK button.
+
 ## Version 1.3.1
 
 - rewriting browsing service for Player

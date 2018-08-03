@@ -264,7 +264,9 @@ function getMovies(deviceId, filter, offset, limit) {
     }
     return kodiDB[deviceId].ws.send("VideoLibrary.GetMovies", queery).then(x => {
       const listItems = tools.itemCheck(x, "movies");
-      return listItems.map(item => {
+      let list = { total: 0, items: [] };
+      list.total = x.limits.total;
+      list.items = listItems.map(item => {
         return {
           thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
           title: `${item.label} (${item.year})`,
@@ -272,6 +274,7 @@ function getMovies(deviceId, filter, offset, limit) {
           actionIdentifier: `movieid;${item.movieid}`
         };
       });
+      return list;
     });
   } else {
     return Promise.resolve({});
@@ -298,7 +301,9 @@ function getRecentEpisodes(deviceId) {
     };
     return kodiDB[deviceId].ws.send("VideoLibrary.GetEpisodes", queery).then(x => {
       const listItems = tools.itemCheck(x, "episodes");
-      return listItems.map(item => {
+      let list = { total: 0, items: [] };
+      list.total = x.limits.total;
+      list.items = listItems.map(item => {
         return {
           thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.art.thumb),
           title: `${item.showtitle}`,
@@ -306,6 +311,7 @@ function getRecentEpisodes(deviceId) {
           actionIdentifier: `episodeid;${item.episodeid}`
         };
       });
+      return list;
     });
   } else {
     return Promise.resolve({});
@@ -322,7 +328,9 @@ function getTVshowEpisodes(deviceId, showId, offset, limit) {
     };
     return kodiDB[deviceId].ws.send("VideoLibrary.GetEpisodes", queery).then(x => {
       const listItems = tools.itemCheck(x, "episodes");
-      return listItems.map(item => {
+      let list = { total: 0, items: [] };
+      list.total = x.limits.total;
+      list.items = listItems.map(item => {
         return {
           thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.art.thumb),
           title: `${item.showtitle}`,
@@ -330,6 +338,7 @@ function getTVshowEpisodes(deviceId, showId, offset, limit) {
           actionIdentifier: `episodeid;${item.episodeid}`
         };
       });
+      return list;
     });
   } else {
     return Promise.resolve({});
@@ -346,7 +355,9 @@ function getTVShows(deviceId, offset, limit) {
     };
     return kodiDB[deviceId].ws.send("VideoLibrary.GetTVShows", queery).then(x => {
       const listItems = tools.itemCheck(x, "tvshows");
-      return listItems.map(item => {
+      let list = { total: 0, items: [] };
+      list.total = x.limits.total;
+      list.items = listItems.map(item => {
         return {
           thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
           title: item.label,
@@ -354,6 +365,7 @@ function getTVShows(deviceId, offset, limit) {
           browseIdentifier: `tvshowid;${item.tvshowid};${item.label}`
         };
       });
+      return items;
     });
   } else {
     return Promise.resolve({});
@@ -370,7 +382,9 @@ function getAlbums(deviceId, offset, limit) {
     };
     return kodiDB[deviceId].ws.send("AudioLibrary.GetAlbums", queery).then(x => {
       const listItems = tools.itemCheck(x, "albums");
-      return listItems.map(item => {
+      let list = { total: 0, items: [] };
+      list.total = x.limits.total;
+      list.items = listItems.map(item => {
         return {
           thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
           title: item.label,
@@ -378,6 +392,7 @@ function getAlbums(deviceId, offset, limit) {
           browseIdentifier: `albumid;${item.albumid};${item.label}`
         };
       });
+      return list;
     });
   } else {
     return Promise.resolve({});
@@ -393,7 +408,9 @@ function getLatestAlbums(deviceId, offset, limit) {
     };
     return kodiDB[deviceId].ws.send("AudioLibrary.GetRecentlyAddedAlbums", queery).then(x => {
       const listItems = tools.itemCheck(x, "albums");
-      return listItems.map(item => {
+      let list = { total: 0, items: [] };
+      list.total = x.limits.total;
+      list.items = listItems.map(item => {
         return {
           thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
           title: item.label,
@@ -401,6 +418,7 @@ function getLatestAlbums(deviceId, offset, limit) {
           browseIdentifier: `albumid;${item.albumid};${item.label}`
         };
       });
+      return list;
     });
   } else {
     return Promise.resolve({});
@@ -418,7 +436,9 @@ function getAlbumTracks(deviceId, id, offset, limit) {
     };
     return kodiDB[deviceId].ws.send("AudioLibrary.GetSongs", queery).then(x => {
       let listItems = tools.itemCheck(x, "songs");
-      listItems = listItems.map(item => {
+      let list = { total: 0, items: [] };
+      list.total = x.limits.total;
+      list.items = listItems.map(item => {
         return {
           thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
           title: `${item.track}.  ${item.label}`,
@@ -426,12 +446,12 @@ function getAlbumTracks(deviceId, id, offset, limit) {
           actionIdentifier: `songid;${item.songid}`
         };
       });
-      listItems.unshift({
+      list.items.unshift({
         title: "Play Album",
         thumbnailUri: images.icon_music,
         actionIdentifier: `albumid;${id}`
       });
-      return listItems;
+      return list;
     });
   } else {
     return Promise.resolve({});
@@ -448,7 +468,9 @@ function getMusicVideos(deviceId, offset, limit) {
     };
     return kodiDB[deviceId].ws.send("VideoLibrary.GetMusicVideos", queery).then(x => {
       const listItems = tools.itemCheck(x, "musicvideos");
-      return listItems.map(item => {
+      let list = { total: 0, items: [] };
+      list.total = x.limits.total;
+      list.items = listItems.map(item => {
         return {
           thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
           title: item.title,
@@ -456,6 +478,7 @@ function getMusicVideos(deviceId, offset, limit) {
           actionIdentifier: `musicvideoid;${item.musicvideoid}`
         };
       });
+      return list;
     });
   } else {
     return Promise.resolve({});
@@ -476,7 +499,9 @@ function getPvrRadioChannels(deviceId, offset, limit) {
       if (typeof item.broadcastnow != "undefined" && typeof item.broadcastnow.title != "undefined") {
         broadcastnowTitle = item.broadcastnow.title;
       }
-      return listItems.map(item => {
+      let list = { total: 0, items: [] };
+      list.total = x.limits.total;
+      list.items = listItems.map(item => {
         return {
           thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
           title: item.label,
@@ -484,6 +509,7 @@ function getPvrRadioChannels(deviceId, offset, limit) {
           actionIdentifier: `channelid;${item.channelid}`
         };
       });
+      return list;
     });
   } else {
     return Promise.resolve({});
@@ -504,7 +530,9 @@ function getPvrTvChannels(deviceId, offset, limit) {
       if (typeof item.broadcastnow != "undefined" && typeof item.broadcastnow.title != "undefined") {
         broadcastnowTitle = item.broadcastnow.title;
       }
-      return listItems.map(item => {
+      let list = { total: 0, items: [] };
+      list.total = x.limits.total;
+      list.items = listItems.map(item => {
         return {
           thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
           title: item.label,
@@ -512,6 +540,7 @@ function getPvrTvChannels(deviceId, offset, limit) {
           actionIdentifier: `channelid;${item.channelid}`
         };
       });
+      return list;
     });
   } else {
     return Promise.resolve({});
@@ -527,7 +556,9 @@ function getPvrRecordings(deviceId, offset, limit) {
     };
     return kodiDB[deviceId].ws.send("PVR.GetRecordings", queery).then(x => {
       const listItems = tools.itemCheck(x, "recordings");
-      return listItems.map(item => {
+      let list = { total: 0, items: [] };
+      list.total = x.limits.total;
+      list.items = listItems.map(item => {
         return {
           thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.title),
           title: item.title,
@@ -535,6 +566,7 @@ function getPvrRecordings(deviceId, offset, limit) {
           actionIdentifier: `recordingid;${item.recordingid}`
         };
       });
+      return list;
     });
   } else {
     return Promise.resolve({});

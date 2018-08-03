@@ -14,7 +14,6 @@ function action(deviceId, actionIdentifier) {
   const actionId = actionIdentifier.split(";");
   const action = actionId[0];
   const id = actionId[1];
-  const test = { [actionId[0]]: parseInt(actionId[1], 10) };
   kodiController.library.playerOpen(deviceId, { [action]: parseInt(id, 10) });
 }
 
@@ -39,62 +38,62 @@ function browse(devideId, params) {
     return baseListPVRMenu(devideId);
   } else if (browseIdentifier == ".Movies.Movies") {
     return kodiController.library.getMovies(devideId, {}, listOptions.offset, listOptions.limit).then(listItems => {
-      listOptions.total = listItems.length;
+      listOptions.total = listItems.total;
       return formatList(listItems, listOptions, browseIdentifier);
     });
   } else if (browseIdentifier == ".Movies.MoviesUnwatched") {
     return kodiController.library.getMovies(devideId, { field: "playcount", operator: "is", value: "0" }, listOptions.offset, listOptions.limit).then(listItems => {
-      listOptions.total = listItems.length;
+      listOptions.total = listItems.total;
       return formatList(listItems, listOptions, browseIdentifier);
     });
   } else if (browseIdentifier == ".Movies.MoviesWatched") {
     return kodiController.library.getMovies(devideId, { field: "playcount", operator: "greaterthan", value: "0" }, listOptions.offset, listOptions.limit).then(listItems => {
-      listOptions.total = listItems.length;
+      listOptions.total = listItems.total;
       return formatList(listItems, listOptions, browseIdentifier);
     });
   } else if (browseIdentifier == ".Movies.Recent Movies") {
     return kodiController.library.getRecentlyAddedMovies(devideId).then(listItems => {
-      listOptions.total = listItems.length;
+      listOptions.total = listItems.total;
       return formatList(listItems, listOptions, browseIdentifier);
     });
   } else if (browseIdentifier == ".Music.Albums") {
     return kodiController.library.getAlbums(devideId, listOptions.offset, listOptions.limit).then(listItems => {
-      listOptions.total = listItems.length;
+      listOptions.total = listItems.total;
       return formatList(listItems, listOptions, browseIdentifier);
     });
   } else if (browseIdentifier == ".Music.Recent albums") {
     return kodiController.library.getLatestAlbums(devideId, listOptions.offset, listOptions.limit).then(listItems => {
-      listOptions.total = listItems.length;
+      listOptions.total = listItems.total;
       return formatList(listItems, listOptions, browseIdentifier);
     });
   } else if (browseIdentifier == ".Music.Music Videos") {
     return kodiController.library.getMusicVideos(devideId, listOptions.offset, listOptions.limit).then(listItems => {
-      listOptions.total = listItems.length;
+      listOptions.total = listItems.total;
       return formatList(listItems, listOptions, browseIdentifier);
     });
   } else if (browseIdentifier == ".TVShows.TV Shows") {
     return kodiController.library.getTVShows(devideId, listOptions.offset, listOptions.limit).then(listItems => {
-      listOptions.total = listItems.length;
+      listOptions.total = listItems.total;
       return formatList(listItems, listOptions, browseIdentifier);
     });
   } else if (browseIdentifier == ".TVShows.Recent Episodes") {
     return kodiController.library.getRecentEpisodes(devideId, listOptions.offset, listOptions.limit).then(listItems => {
-      listOptions.total = listItems.length;
+      listOptions.total = listItems.total;
       return formatList(listItems, listOptions, browseIdentifier);
     });
   } else if (browseIdentifier == ".PVR.TV Channels") {
     return kodiController.library.getPvrTvChannels(devideId, listOptions.offset, listOptions.limit).then(listItems => {
-      listOptions.total = listItems.length;
+      listOptions.total = listItems.total;
       return formatList(listItems, listOptions, browseIdentifier);
     });
   } else if (browseIdentifier == ".PVR.Radio Stations") {
     return kodiController.library.getPvrRadioChannels(devideId, listOptions.offset, listOptions.limit).then(listItems => {
-      listOptions.total = listItems.length;
+      listOptions.total = listItems.total;
       return formatList(listItems, listOptions, browseIdentifier);
     });
   } else if (browseIdentifier == ".PVR.Recordings") {
     return kodiController.library.getPvrRecordings(devideId, listOptions.offset, listOptions.limit).then(listItems => {
-      listOptions.total = listItems.length;
+      listOptions.total = listItems.total;
       return formatList(listItems, listOptions, browseIdentifier);
     });
   } else if (browseIdentifier.match(/^.*;[0-9]*;.*$/)) {
@@ -107,12 +106,12 @@ function browse(devideId, params) {
         listOptions.offset = listOptions.offset - 1; //Fix because 1 item is added to the top for playing the album
       }
       return kodiController.library.getAlbumTracks(devideId, id, listOptions.offset, listOptions.limit).then(listItems => {
-        listOptions.total = listItems.length;
+        listOptions.total = listItems.total;
         return formatList(listItems, listOptions, title);
       });
     } else if (type == "tvshowid") {
       return kodiController.library.getTVshowEpisodes(devideId, id, listOptions.offset, listOptions.limit).then(listItems => {
-        listOptions.total = listItems.length;
+        listOptions.total = listItems.total;
         return formatList(listItems, listOptions, title);
       });
     }
@@ -123,7 +122,7 @@ function browse(devideId, params) {
 
 //////////////////////////////////
 // Format Browsing list
-function formatList(listItems, listOptions, title) {
+function formatList(itemlist, listOptions, title) {
   if (listOptions.total < listOptions.limit) {
     listOptions.limit = listOptions.total;
   }
@@ -132,7 +131,7 @@ function formatList(listItems, listOptions, title) {
 
   const options = {
     title: `Browsing ${title}`,
-    totalMatchingItems: listItems.length,
+    totalMatchingItems: itemlist.total,
     browseIdentifier,
     offset: listOptions.offset || 0,
     limit: listOptions.limit
@@ -142,7 +141,7 @@ function formatList(listItems, listOptions, title) {
 
   console.log("browseIdentifier:", browseIdentifier);
 
-  listItems.map(item => {
+  itemlist.items.map(item => {
     list.addListItem(item);
   });
 

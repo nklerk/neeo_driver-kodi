@@ -7,6 +7,7 @@ module.exports.neeoCommands = function() {
     "POWER OFF Forced": { method: "System.Shutdown", params: {}, cac: false },
     "POWER ON": { method: "WOL", params: {}, cac: false },
     "POWER ON Forced": { method: "WOL", params: {}, cac: false },
+    "PLAY PAUSE": { method: "Input.ExecuteAction", params: { action: "pause" }, cac: false },
     PLAY: { method: "Input.ExecuteAction", params: { action: "play" }, cac: false },
     PAUSE: { method: "Input.ExecuteAction", params: { action: "pause" }, cac: false },
     STOP: { method: "Input.ExecuteAction", params: { action: "stop" }, cac: false },
