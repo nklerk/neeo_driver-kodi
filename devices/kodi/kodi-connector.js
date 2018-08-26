@@ -28,7 +28,9 @@ class Client {
     this.events = new EventEmitter();
     this.socket;
     this.volume = 100;
+    this.nowPlaying = false;
     this.nowPlayingLabel = "";
+    this.nowPlayingDescription = "";
     this.nowPlayingImg = images.logo_KODI_tp;
   }
 
@@ -132,32 +134,42 @@ function handleKodiEvents(kodi, method, params) {
   if (method === "Application.OnVolumeChanged") {
     kodi.volume = params.data.volume;
     kodi.events.emit("notification", { mac: kodi.mac, type: "VolumeChanged", volume: params.data.volume });
-  }
-  if (method === "Player.OnPlay" && (params.data.item.type === "movie" || params.data.item.type === "musicvideo")) {
-    kodi.send("Player.GetItem", { playerid: params.data.player.playerid, properties: ["thumbnail", "title", "year"] }).then(y => {
+  } else if (method === "Player.OnPlay" && (params.data.item.type === "movie" || params.data.item.type === "musicvideo")) {
+    kodi.send("Player.GetItem", { playerid: params.data.player.playerid, properties: ["thumbnail", "title", "year", "genre"] }).then(y => {
+      kodi.nowPlaying = true;
       kodi.nowPlayingLabel = tools.movieTitle({ label: y.item.title, year: y.item.year });
+      kodi.nowPlayingDescription = y.item.genre.join(", ");
       kodi.nowPlayingImg = tools.imageToHttp({ ws: kodi }, y.item.thumbnail);
-      kodi.events.emit("notification", { mac: kodi.mac, type: "PlayingChanged", title: kodi.nowPlayingLabel, image: kodi.nowPlayingImg });
+      kodi.events.emit("notification", { mac: kodi.mac, type: "PlayingChanged", title: kodi.nowPlayingLabel, description: kodi.nowPlayingDescription, image: kodi.nowPlayingImg });
     });
-  }
-  if (method === "Player.OnPlay" && params.data.item.type === "song") {
-    kodi.send("Player.GetItem", { playerid: params.data.player.playerid, properties: ["thumbnail", "title", "artist"] }).then(y => {
-      kodi.nowPlayingLabel = `${y.item.title}, ${y.item.artist}`;
+  } else if (method === "Player.OnPlay" && params.data.item.type === "song") {
+    kodi.send("Player.GetItem", { playerid: params.data.player.playerid, properties: ["thumbnail", "title", "artist", "track"] }).then(y => {
+      kodi.nowPlaying = true;
+      kodi.nowPlayingLabel = `${y.item.track}.  ${y.item.label}`;
+      kodi.nowPlayingDescription = y.item.artist.join(", ");
       kodi.nowPlayingImg = tools.imageToHttp({ ws: kodi }, y.item.thumbnail);
-      kodi.events.emit("notification", { mac: kodi.mac, type: "PlayingChanged", title: kodi.nowPlayingLabel, image: kodi.nowPlayingImg });
+      kodi.events.emit("notification", { mac: kodi.mac, type: "PlayingChanged", title: kodi.nowPlayingLabel, description: kodi.nowPlayingDescription, image: kodi.nowPlayingImg });
     });
-  }
-  if (method === "Player.OnPlay" && params.data.item.type === "episode") {
-    kodi.send("Player.GetItem", { playerid: params.data.player.playerid, properties: ["art", "title", "showtitle"] }).then(y => {
-      kodi.nowPlayingLabel = `${y.item.showtitle}, ${y.item.title}`;
+  } else if (method === "Player.OnPlay" && params.data.item.type === "episode") {
+    kodi.send("Player.GetItem", { playerid: params.data.player.playerid, properties: ["title", "showtitle", "season", "episode", "art"] }).then(y => {
+      kodi.nowPlaying = true;
+      kodi.nowPlayingLabel = `${y.item.showtitle}`;
+      kodi.nowPlayingDescription = `S${y.item.season} E${y.item.episode},  ${y.item.title}`;
       kodi.nowPlayingImg = tools.imageToHttp({ ws: kodi }, y.item.art["tvshow.poster"]);
-      kodi.events.emit("notification", { mac: kodi.mac, type: "PlayingChanged", title: kodi.nowPlayingLabel, image: kodi.nowPlayingImg });
+      kodi.events.emit("notification", { mac: kodi.mac, type: "PlayingChanged", title: kodi.nowPlayingLabel, description: kodi.nowPlayingDescription, image: kodi.nowPlayingImg });
     });
-  }
-  if (method === "Player.OnStop") {
-    kodi.nowPlayingLabel = "";
-    kodi.nowPlayingImg = "";
-    kodi.events.emit("notification", { mac: kodi.mac, type: "PlayingChanged", title: "", image: images.logo_KODI_tp });
+  } else if (method === "Player.OnStop") {
+    kodi.nowPlaying = false;
+    kodi.nowPlayingLabel = "Nothing is playing right now.";
+    kodi.nowPlayingDescription = "";
+    kodi.nowPlayingImg = images.logo_KODI_tp;
+    kodi.events.emit("notification", { mac: kodi.mac, type: "PlayingStopped", title: "", description: kodi.nowPlayingDescription, image: images.logo_KODI_tp });
+  } else if (method === "Player.OnPause") {
+    kodi.nowPlaying = false;
+    //kodi.nowPlayingLabel = "";
+    kodi.nowPlayingDescription = "PAUSED";
+    //kodi.nowPlayingImg = images.logo_KODI_tp;
+    kodi.events.emit("notification", { mac: kodi.mac, type: "PlayingPaused", title: "", description: kodi.nowPlayingDescription, image: images.logo_KODI_tp });
   }
 }
 
@@ -184,7 +196,9 @@ function getMac(host) {
       }
       if (id == `MAC${host}`) {
         if (tools.isProperMac(result)) {
-          ws.close;
+          ws.close();
+          ws.terminate();
+          ws = null;
           clearTimeout(to);
           resolve(result);
         } else {

@@ -11,18 +11,15 @@ module.exports = {
 };
 
 function itemCheck(x, items) {
-  let list = {};
-  list.items = [];
-  list.total = 0;
+  let list = [];
   if (typeof x != "undefined" && x.limits && x.limits.total > 0) {
-    list.items = x[items];
-    list.total = x.limits.total;
+    list = x[items];
   }
   return list;
 }
 
 function imageToHttp(kodiInstance, uri) {
-  return `http://${kodiInstance.ws.username}:${kodiInstance.ws.password}@${kodiInstance.ws.options.host}:${kodiInstance.ws.httpPort}/image/` + encodeURIComponent(uri);
+  return `http://${kodiInstance.ws.username}:${kodiInstance.ws.password}@${kodiInstance.ws.options.host}:${kodiInstance.ws.httpPort}/vfs/` + encodeURIComponent(uri);
 }
 
 function movieTitle(movie) {

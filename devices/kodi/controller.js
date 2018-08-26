@@ -1,56 +1,70 @@
 "use strict";
 
-const commands = require("./Commands/commands");
-const browserServiceMovies = require("./BrowserService/kodi-browserService-movies");
-const browserServiceMusic = require("./BrowserService/kodi-browserService-music");
-const browserServiceTVShow = require("./BrowserService/kodi-browserService-tvshow");
-const browserServicePVR = require("./BrowserService/kodi-browserService-pvr");
+const commands = require("./kodi-commands");
+const browserService = require("./kodi-browserService");
 const kodiController = require("./kodi-controller");
 
-function onButtonPressed(name, deviceid) {
-  console.log("Button pressed:", deviceid, name);
+function onButtonPressed(name, deviceId) {
+  console.log("Button pressed:", deviceId, name);
   const cmd = commands.neeoCommands()[name];
   if (cmd.cac) {
-    kodiController.sendContentAwareCommand(deviceid, cmd.method, cmd.params);
+    kodiController.sendContentAwareCommand(deviceId, cmd.method, cmd.params);
   } else {
-    kodiController.sendCommand(deviceid, cmd.method, cmd.params);
+    kodiController.sendCommand(deviceId, cmd.method, cmd.params);
   }
+}
+
+//root
+
+function libraryGetter(deviceId, params) {
+  return browserService.browse(deviceId, params);
+}
+function libraryAction(deviceId, params) {
+  browserService.action(deviceId, params.actionIdentifier);
 }
 
 // Movies
 function movieLibraryGetter(deviceId, params) {
-  return browserServiceMovies.browse(deviceId, params);
+  params.browseIdentifier = params.browseIdentifier || ".Movies";
+  return browserService.browse(deviceId, params);
 }
-
 function movieLibraryAction(deviceId, params) {
-  browserServiceMovies.action(deviceId, params.actionIdentifier);
+  browserService.action(deviceId, params.actionIdentifier);
 }
 
 //Music
 function musicLibraryGetter(deviceId, params) {
-  return browserServiceMusic.browse(deviceId, params);
+  params.browseIdentifier = params.browseIdentifier || ".Music";
+  return browserService.browse(deviceId, params);
 }
-
 function musicLibraryAction(deviceId, params) {
-  browserServiceMusic.action(deviceId, params.actionIdentifier);
+  browserService.action(deviceId, params.actionIdentifier);
 }
 
 //TV Show
 function tvshowLibraryGetter(deviceId, params) {
-  return browserServiceTVShow.browse(deviceId, params);
+  params.browseIdentifier = params.browseIdentifier || ".TVShows";
+  return browserService.browse(deviceId, params);
 }
-
 function tvshowLibraryAction(deviceId, params) {
-  browserServiceTVShow.action(deviceId, params.actionIdentifier);
+  browserService.action(deviceId, params.actionIdentifier);
 }
 
 // TV
 function pvrLibraryGetter(deviceId, params) {
-  return browserServicePVR.browse(deviceId, params);
+  params.browseIdentifier = params.browseIdentifier || ".PVR";
+  return browserService.browse(deviceId, params);
+}
+function pvrLibraryAction(deviceId, params) {
+  browserService.action(deviceId, params.actionIdentifier);
 }
 
-function pvrLibraryAction(deviceId, params) {
-  browserServicePVR.action(deviceId, params.actionIdentifier);
+function queueGetter(deviceId, params) {
+  params.browseIdentifier = params.browseIdentifier || ".QUEUE";
+  return browserService.browse(deviceId, params);
+}
+function queueAction(deviceId, params) {
+  browserService.action(deviceId, params.actionIdentifier);
 }
 
 //Discovery
@@ -86,8 +100,45 @@ function nowPlayingLabel(deviceId) {
   return kodiController.getNowPlayingLabel(deviceId);
 }
 
+function nowPlayingDescription(deviceId) {
+  return kodiController.getNowPlayingDescription(deviceId);
+}
+
 function nowPlayingImg(deviceId) {
   return kodiController.getNowPlayingImg(deviceId);
+}
+
+function playSwitchGetter(deviceId) {
+  return kodiController.getNowPlaying(deviceId);
+}
+function playSwitchSetter(deviceId, value) {
+  console.log("playSwitchSetter", deviceId, value);
+  if (value) {
+    kodiController.sendCommand(deviceId, "Input.ExecuteAction", { action: "play" });
+  } else {
+    kodiController.sendCommand(deviceId, "Input.ExecuteAction", { action: "pause" });
+  }
+}
+
+function muteSwitchGetter(deviceId) {
+  return false;
+}
+function muteSwitchSetter(deviceId, value) {
+  console.log("muteSwitchSetter", deviceId, value);
+}
+
+function shuffleSwitchGetter(deviceId) {
+  return false;
+}
+function shuffleSwitchSetter(deviceId, value) {
+  console.log("shuffleSwitchSetter", deviceId, value);
+}
+
+function repeatSwitchGetter(deviceId) {
+  return false;
+}
+function repeatSwitchSetter(deviceId, value) {
+  console.log("repeatSwitchSetter", deviceId, value);
 }
 
 module.exports = {
@@ -96,8 +147,44 @@ module.exports = {
     get: volumeGet,
     set: volumeSet
   },
+  playSwitch: {
+    getter: playSwitchGetter,
+    setter: playSwitchSetter
+  },
+  muteSwitch: {
+    getter: muteSwitchGetter,
+    setter: muteSwitchSetter
+  },
+  shuffleSwitch: {
+    getter: shuffleSwitchGetter,
+    setter: shuffleSwitchSetter
+  },
+  repeatSwitch: {
+    getter: repeatSwitchGetter,
+    setter: repeatSwitchSetter
+  },
+  coverArtSensor: {
+    getter: nowPlayingImg,
+    setter: nowPlayingImg
+  },
+  titleSensor: {
+    getter: nowPlayingLabel,
+    setter: nowPlayingLabel
+  },
+  descriptionSensor: {
+    getter: nowPlayingDescription,
+    setter: nowPlayingDescription
+  },
   nowPlayingLabel,
   nowPlayingImg,
+  library: {
+    getter: libraryGetter,
+    action: libraryAction
+  },
+  queue: {
+    getter: queueGetter,
+    action: queueAction
+  },
   movieLibrary: {
     getter: movieLibraryGetter,
     action: movieLibraryAction
