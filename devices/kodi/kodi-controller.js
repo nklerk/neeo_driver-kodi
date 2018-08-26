@@ -11,7 +11,7 @@ mdns.excludeInterface("0.0.0.0");
 let lastDiscovery;
 let kodiDB = {};
 let mdnsBrowser;
-let addDevicePassword = "";
+let addDevicePassword = ""; //to be build
 let sendComponentUpdate;
 let discoveryConnect = "";
 
@@ -25,6 +25,11 @@ const COMMAND_QUEUE_TIMEOUTLONG = 300000; //Maximum time for polling initial con
 const CONNECTED_BANNER_TIME = 10000; //Time length the NEEO Logo and connection banner is shown in KODI.
 const MDNS_TIMEOUT = 2000; //Duration per MDNS Discovery scan, after the timer the discovery gets cleaned and avoids memory leaks.
 const NEEO_DRIVER_SEARCH_DELAY = 3000; //Delay before responding on a discovery request. this gives the driver the time to discover, get mac, build RPC etc..
+
+const CAC_FULLSCREEN_VIDEO = 12005;
+//const CAC_FULLSCREEN_OSD = 12901;
+
+const NOTCONNECTEDITEM = { total: 1, items: [{ thumbnailUri: images.logo_KODI_tp, title: "Kodi is not connected", label: "Try loading the list again.", actionIdentifier: "" }] };
 
 module.exports = {
   discovered,
@@ -45,6 +50,7 @@ module.exports = {
     getPvrRadioChannels,
     getPvrTvChannels,
     getPvrRecordings,
+    getQueue,
     playerOpen
   },
   getNowPlayingLabel,
@@ -150,28 +156,21 @@ function handleKodiEvents(x) {
   if (x.type === "VolumeChanged") {
     console.log(`KODI instance ${x.mac} changed volume to ${x.volume}%`);
     updateComponent(x.mac, "VOLUME", x.volume);
-  } else if (x.type === "PlayingChanged") {
-    console.log(`KODI instance ${x.mac} now playing, ${x.title}`);
+    updateComponent(x.mac, "VOLUMESLIDER", x.volume);
+  } else if (x.type === "PlayingChanged" || x.type == "PlayingStopped") {
+    console.log(`KODI instance ${x.mac}, ${x.type}`);
     updateComponent(x.mac, "PLAYING", true);
     updateComponent(x.mac, "COVER_ART_SENSOR", x.image);
+    updateComponent(x.mac, "NOWPLAYINGIMAGE", x.image);
     updateComponent(x.mac, "TITLE_SENSOR", x.title);
+    updateComponent(x.mac, "NOWPLAYINGTITLE", x.title);
     updateComponent(x.mac, "DESCRIPTION_SENSOR", x.description);
-    updateComponent(x.mac, "NOWPLAYINGLABEL", x.title);
-    updateComponent(x.mac, "NOWPLAYINGIMGSMALL", x.image);
-    updateComponent(x.mac, "NOWPLAYINGIMGLARGE", x.image);
-  } else if (x.type == "PlayingStopped") {
-    console.log(`KODI instance ${x.mac} stoped playing.`);
-    updateComponent(x.mac, "PLAYING", false);
-    updateComponent(x.mac, "COVER_ART_SENSOR", x.image);
-    updateComponent(x.mac, "TITLE_SENSOR", x.title);
-    updateComponent(x.mac, "DESCRIPTION_SENSOR", x.description);
-    updateComponent(x.mac, "NOWPLAYINGLABEL", x.title);
-    updateComponent(x.mac, "NOWPLAYINGIMGSMALL", x.image);
-    updateComponent(x.mac, "NOWPLAYINGIMGLARGE", x.image);
+    updateComponent(x.mac, "NOWPLAYINGDESCRIPTION", x.description);
   } else if (x.type == "PlayingPaused") {
     console.log(`KODI instance ${x.mac} paused.`);
     updateComponent(x.mac, "PLAYING", false);
     updateComponent(x.mac, "DESCRIPTION_SENSOR", x.description);
+    updateComponent(x.mac, "NOWPLAYINGDESCRIPTION", x.description);
   } else {
     console.log(`KODI instance ${x.mac} Feature TYPE: ${x.type} is not implemented in driver.`);
   }
@@ -221,75 +220,52 @@ function kodiReady(deviceID) {
 }
 
 //getRecentlyAddedMovies
-function getRecentlyAddedMovies(deviceId, offset, limit) {
-  const end = offset + limit;
-  const queery = {
-    properties: ["thumbnail", "playcount", "year", "genre"],
-    limits: { start: 0, end: 30 }
-  };
+function getRecentlyAddedMovies(deviceId) {
   if (kodiReady(deviceId)) {
+    const queery = {
+      properties: ["thumbnail", "playcount", "year", "genre"],
+      limits: { start: 0, end: 30 }
+    };
     return kodiDB[deviceId].ws.send("VideoLibrary.GetRecentlyAddedMovies", queery).then(x => {
-      const listItems = tools.itemCheck(x, "movies");
-      return listItems.map(item => {
-        return {
-          thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
-          title: `${item.label} (${item.year})`,
-          label: item.genre.join(", "),
-          actionIdentifier: `movieid;${item.movieid}`
-        };
-      });
+      return buildMovielist(x, deviceId);
     });
   } else {
-    return Promise.resolve({});
+    return Promise.resolve(NOTCONNECTEDITEM);
   }
 }
 
-function getMovies(deviceId, filter, offset, limit) {
+function getMovies(deviceId, filter, offset, limit, sort) {
   if (kodiReady(deviceId)) {
+    sort = sort || { order: "ascending", method: "title" };
     const end = offset + limit;
-    let queery = {};
-    if (filter.field) {
-      queery = {
-        properties: ["thumbnail", "playcount", "year", "genre"],
-        filter,
-        sort: { order: "ascending", method: "title" },
-        limits: { start: offset, end: end }
-      };
-    } else {
-      queery = {
-        properties: ["thumbnail", "playcount", "year", "genre"],
-        sort: { order: "ascending", method: "title" },
-        limits: { start: offset, end: end }
-      };
-    }
+    let queery = {
+      properties: ["thumbnail", "playcount", "year", "genre", "resume"],
+      sort,
+      limits: { start: offset, end: end }
+    };
+    if (filter) queery.filter = filter;
     return kodiDB[deviceId].ws.send("VideoLibrary.GetMovies", queery).then(x => {
-      const listItems = tools.itemCheck(x, "movies");
-      let list = { total: 0, items: [] };
-      list.total = x.limits.total;
-      list.items = listItems.map(item => {
-        return {
-          thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
-          title: `${item.label} (${item.year})`,
-          label: item.genre.join(", "),
-          actionIdentifier: `movieid;${item.movieid}`
-        };
-      });
-      return list;
+      return buildMovielist(x, deviceId);
     });
   } else {
-    return Promise.resolve({});
+    return Promise.resolve(NOTCONNECTEDITEM);
   }
 }
 
-function GetMovieDetails(deviceId, movieId) {
-  if (kodiReady(deviceId)) {
-    return kodiDB[deviceId].ws.send("VideoLibrary.GetMovieDetails", {
-      movieid: movieId,
-      properties: ["thumbnail", "title", "year"]
+function buildMovielist(x, deviceId) {
+  let list = { total: 0, items: [] };
+  if (typeof x != "undefined" && typeof x.limits != "undefined" && x.limits.total != "undefined") {
+    list.total = x.limits.total;
+    list.items = tools.itemCheck(x, "movies").map(item => {
+      return {
+        thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
+        title: `${item.label} (${item.year})`,
+        label: item.genre.join(", "),
+        actionIdentifier: `movieid;${item.movieid}`
+      };
     });
-  } else {
-    return Promise.resolve({});
   }
+  return list;
 }
 
 function getRecentEpisodes(deviceId) {
@@ -300,21 +276,22 @@ function getRecentEpisodes(deviceId) {
       sort: { order: "descending", method: "dateadded" }
     };
     return kodiDB[deviceId].ws.send("VideoLibrary.GetEpisodes", queery).then(x => {
-      const listItems = tools.itemCheck(x, "episodes");
       let list = { total: 0, items: [] };
-      list.total = x.limits.total;
-      list.items = listItems.map(item => {
-        return {
-          thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.art.thumb),
-          title: `${item.showtitle}`,
-          label: `S${item.season} E${item.episode},  ${item.title}`,
-          actionIdentifier: `episodeid;${item.episodeid}`
-        };
-      });
+      if (typeof x != "undefined" && typeof x.limits != "undefined" && x.limits.total != "undefined") {
+        list.total = x.limits.total;
+        list.items = tools.itemCheck(x, "episodes").map(item => {
+          return {
+            thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.art.thumb),
+            title: `${item.showtitle}`,
+            label: `S${item.season} E${item.episode},  ${item.title}`,
+            actionIdentifier: `episodeid;${item.episodeid}`
+          };
+        });
+      }
       return list;
     });
   } else {
-    return Promise.resolve({});
+    return Promise.resolve(NOTCONNECTEDITEM);
   }
 }
 
@@ -327,21 +304,22 @@ function getTVshowEpisodes(deviceId, showId, offset, limit) {
       properties: ["title", "season", "episode", "art", "showtitle"]
     };
     return kodiDB[deviceId].ws.send("VideoLibrary.GetEpisodes", queery).then(x => {
-      const listItems = tools.itemCheck(x, "episodes");
       let list = { total: 0, items: [] };
-      list.total = x.limits.total;
-      list.items = listItems.map(item => {
-        return {
-          thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.art.thumb),
-          title: `${item.showtitle}`,
-          label: `S${item.season} E${item.episode},  ${item.title}`,
-          actionIdentifier: `episodeid;${item.episodeid}`
-        };
-      });
+      if (typeof x != "undefined" && typeof x.limits != "undefined" && x.limits.total != "undefined") {
+        list.total = x.limits.total;
+        list.items = tools.itemCheck(x, "episodes").map(item => {
+          return {
+            thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.art.thumb),
+            title: `${item.showtitle}`,
+            label: `S${item.season} E${item.episode},  ${item.title}`,
+            actionIdentifier: `episodeid;${item.episodeid}`
+          };
+        });
+      }
       return list;
     });
   } else {
-    return Promise.resolve({});
+    return Promise.resolve(NOTCONNECTEDITEM);
   }
 }
 
@@ -354,21 +332,22 @@ function getTVShows(deviceId, offset, limit) {
       properties: ["thumbnail", "year"]
     };
     return kodiDB[deviceId].ws.send("VideoLibrary.GetTVShows", queery).then(x => {
-      const listItems = tools.itemCheck(x, "tvshows");
       let list = { total: 0, items: [] };
-      list.total = x.limits.total;
-      list.items = listItems.map(item => {
-        return {
-          thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
-          title: item.label,
-          label: `${item.label} (${item.year})`,
-          browseIdentifier: `tvshowid;${item.tvshowid};${item.label}`
-        };
-      });
-      return items;
+      if (typeof x != "undefined" && typeof x.limits != "undefined" && x.limits.total != "undefined") {
+        list.total = x.limits.total;
+        list.items = tools.itemCheck(x, "tvshows").map(item => {
+          return {
+            thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
+            title: item.label,
+            label: `${item.label} (${item.year})`,
+            browseIdentifier: `tvshowid;${item.tvshowid};${item.label}`
+          };
+        });
+      }
+      return list;
     });
   } else {
-    return Promise.resolve({});
+    return Promise.resolve(NOTCONNECTEDITEM);
   }
 }
 
@@ -381,21 +360,22 @@ function getAlbums(deviceId, offset, limit) {
       limits: { start: offset, end: end }
     };
     return kodiDB[deviceId].ws.send("AudioLibrary.GetAlbums", queery).then(x => {
-      const listItems = tools.itemCheck(x, "albums");
       let list = { total: 0, items: [] };
-      list.total = x.limits.total;
-      list.items = listItems.map(item => {
-        return {
-          thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
-          title: item.label,
-          label: item.artist.join(", "),
-          browseIdentifier: `albumid;${item.albumid};${item.label}`
-        };
-      });
+      if (typeof x != "undefined" && typeof x.limits != "undefined" && x.limits.total != "undefined") {
+        list.total = x.limits.total;
+        list.items = tools.itemCheck(x, "albums").map(item => {
+          return {
+            thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
+            title: item.label,
+            label: item.artist.join(", "),
+            browseIdentifier: `albumid;${item.albumid};${item.label}`
+          };
+        });
+      }
       return list;
     });
   } else {
-    return Promise.resolve({});
+    return Promise.resolve(NOTCONNECTEDITEM);
   }
 }
 
@@ -407,21 +387,22 @@ function getLatestAlbums(deviceId, offset, limit) {
       limits: { start: offset, end: end }
     };
     return kodiDB[deviceId].ws.send("AudioLibrary.GetRecentlyAddedAlbums", queery).then(x => {
-      const listItems = tools.itemCheck(x, "albums");
       let list = { total: 0, items: [] };
-      list.total = x.limits.total;
-      list.items = listItems.map(item => {
-        return {
-          thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
-          title: item.label,
-          label: item.artist.join(", "),
-          browseIdentifier: `albumid;${item.albumid};${item.label}`
-        };
-      });
+      if (typeof x != "undefined" && typeof x.limits != "undefined" && x.limits.total != "undefined") {
+        list.total = x.limits.total;
+        list.items = tools.itemCheck(x, "albums").map(item => {
+          return {
+            thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
+            title: item.label,
+            label: item.artist.join(", "),
+            browseIdentifier: `albumid;${item.albumid};${item.label}`
+          };
+        });
+      }
       return list;
     });
   } else {
-    return Promise.resolve({});
+    return Promise.resolve(NOTCONNECTEDITEM);
   }
 }
 
@@ -435,26 +416,27 @@ function getAlbumTracks(deviceId, id, offset, limit) {
       limits: { start: offset, end: end }
     };
     return kodiDB[deviceId].ws.send("AudioLibrary.GetSongs", queery).then(x => {
-      let listItems = tools.itemCheck(x, "songs");
       let list = { total: 0, items: [] };
-      list.total = x.limits.total;
-      list.items = listItems.map(item => {
-        return {
-          thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
-          title: `${item.track}.  ${item.label}`,
-          label: item.artist.join(", "),
-          actionIdentifier: `songid;${item.songid}`
-        };
-      });
-      list.items.unshift({
-        title: "Play Album",
-        thumbnailUri: images.icon_music,
-        actionIdentifier: `albumid;${id}`
-      });
+      if (typeof x != "undefined" && typeof x.limits != "undefined" && x.limits.total != "undefined") {
+        list.total = x.limits.total;
+        list.items = tools.itemCheck(x, "songs").map(item => {
+          return {
+            thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
+            title: `${item.track}.  ${item.label}`,
+            label: item.artist.join(", "),
+            actionIdentifier: `songid;${item.songid}`
+          };
+        });
+        list.items.unshift({
+          title: "Play Album",
+          thumbnailUri: images.icon_music,
+          actionIdentifier: `albumid;${id}`
+        });
+      }
       return list;
     });
   } else {
-    return Promise.resolve({});
+    return Promise.resolve(NOTCONNECTEDITEM);
   }
 }
 
@@ -467,21 +449,22 @@ function getMusicVideos(deviceId, offset, limit) {
       limits: { start: offset, end: end }
     };
     return kodiDB[deviceId].ws.send("VideoLibrary.GetMusicVideos", queery).then(x => {
-      const listItems = tools.itemCheck(x, "musicvideos");
       let list = { total: 0, items: [] };
-      list.total = x.limits.total;
-      list.items = listItems.map(item => {
-        return {
-          thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
-          title: item.title,
-          label: item.artist.join(", "),
-          actionIdentifier: `musicvideoid;${item.musicvideoid}`
-        };
-      });
+      if (typeof x != "undefined" && typeof x.limits != "undefined" && x.limits.total != "undefined") {
+        list.total = x.limits.total;
+        list.items = tools.itemCheck(x, "musicvideos").map(item => {
+          return {
+            thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
+            title: item.title,
+            label: item.artist.join(", "),
+            actionIdentifier: `musicvideoid;${item.musicvideoid}`
+          };
+        });
+      }
       return list;
     });
   } else {
-    return Promise.resolve({});
+    return Promise.resolve(NOTCONNECTEDITEM);
   }
 }
 
@@ -494,25 +477,22 @@ function getPvrRadioChannels(deviceId, offset, limit) {
       limits: { start: offset, end: end }
     };
     return kodiDB[deviceId].ws.send("PVR.GetChannels", queery).then(x => {
-      const listItems = tools.itemCheck(x, "channels");
-      let broadcastnowTitle = "";
-      if (typeof item.broadcastnow != "undefined" && typeof item.broadcastnow.title != "undefined") {
-        broadcastnowTitle = item.broadcastnow.title;
-      }
       let list = { total: 0, items: [] };
-      list.total = x.limits.total;
-      list.items = listItems.map(item => {
-        return {
-          thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
-          title: item.label,
-          label: broadcastnowTitle,
-          actionIdentifier: `channelid;${item.channelid}`
-        };
-      });
+      if (typeof x != "undefined" && typeof x.limits != "undefined" && x.limits.total != "undefined") {
+        list.total = x.limits.total;
+        list.items = tools.itemCheck(x, "channels").map(item => {
+          return {
+            thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
+            title: item.label,
+            label: item.broadcastnow.title || "",
+            actionIdentifier: `channelid;${item.channelid}`
+          };
+        });
+      }
       return list;
     });
   } else {
-    return Promise.resolve({});
+    return Promise.resolve(NOTCONNECTEDITEM);
   }
 }
 
@@ -525,25 +505,22 @@ function getPvrTvChannels(deviceId, offset, limit) {
       limits: { start: offset, end: end }
     };
     return kodiDB[deviceId].ws.send("PVR.GetChannels", queery).then(x => {
-      const listItems = tools.itemCheck(x, "channels");
-      let broadcastnowTitle = "";
-      if (typeof item.broadcastnow != "undefined" && typeof item.broadcastnow.title != "undefined") {
-        broadcastnowTitle = item.broadcastnow.title;
-      }
       let list = { total: 0, items: [] };
-      list.total = x.limits.total;
-      list.items = listItems.map(item => {
-        return {
-          thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
-          title: item.label,
-          label: broadcastnowTitle,
-          actionIdentifier: `channelid;${item.channelid}`
-        };
-      });
+      if (typeof x != "undefined" && typeof x.limits != "undefined" && x.limits.total != "undefined") {
+        list.total = x.limits.total;
+        list.items = tools.itemCheck(x, "channels").map(item => {
+          return {
+            thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.thumbnail),
+            title: item.label,
+            label: item.broadcastnow.title || "",
+            actionIdentifier: `channelid;${item.channelid}`
+          };
+        });
+      }
       return list;
     });
   } else {
-    return Promise.resolve({});
+    return Promise.resolve(NOTCONNECTEDITEM);
   }
 }
 
@@ -555,21 +532,57 @@ function getPvrRecordings(deviceId, offset, limit) {
       limits: { start: offset, end: end }
     };
     return kodiDB[deviceId].ws.send("PVR.GetRecordings", queery).then(x => {
-      const listItems = tools.itemCheck(x, "recordings");
       let list = { total: 0, items: [] };
-      list.total = x.limits.total;
-      list.items = listItems.map(item => {
-        return {
-          thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.title),
-          title: item.title,
-          label: item.label,
-          actionIdentifier: `recordingid;${item.recordingid}`
-        };
-      });
+      if (typeof x != "undefined" && typeof x.limits != "undefined" && x.limits.total != "undefined") {
+        list.total = x.limits.total;
+        list.items = tools.itemCheck(x, "recordings").map(item => {
+          return {
+            thumbnailUri: tools.imageToHttp(kodiDB[deviceId], item.title),
+            title: item.title,
+            label: item.label,
+            actionIdentifier: `recordingid;${item.recordingid}`
+          };
+        });
+      }
       return list;
     });
   } else {
-    return Promise.resolve({});
+    return Promise.resolve(NOTCONNECTEDITEM);
+  }
+}
+
+function getQueue(deviceId, offset, limit) {
+  if (kodiReady(deviceId)) {
+    const end = offset + limit;
+    const queery = {
+      playlistid: 0,
+      properties: ["title", "thumbnail", "artist", "track", "episode"],
+      limits: { start: offset, end: end }
+    };
+    return kodiDB[deviceId].ws.send("Playlist.GetItems", queery).then(x => {
+      let list = { total: 0, items: [] };
+      if (typeof x != "undefined" && typeof x.limits != "undefined" && x.limits.total != "undefined") {
+        list.total = x.limits.total;
+        let kodiitems = tools.itemCheck(x, "items");
+        for (let i in kodiitems) {
+          let item = {};
+          if (kodiitems[i].artist.length > 0) {
+            item.label = kodiitems[i].artist.join(", ");
+          } else if (kodiitems[i].episode) {
+            item.label = kodiitems[i].episode;
+          } else {
+            item.label = "";
+          }
+          item.thumbnailUri = tools.imageToHttp(kodiDB[deviceId], kodiitems[i].thumbnail);
+          item.title = kodiitems[i].title;
+          item.actionIdentifier = `queueid;${i}`;
+          list.items.push(item);
+        }
+      }
+      return list;
+    });
+  } else {
+    return Promise.resolve(NOTCONNECTEDITEM);
   }
 }
 
@@ -623,9 +636,15 @@ function setVolume(deviceId, volume) {
 
 function playerOpen(deviceId, object) {
   if (kodiReady(deviceId)) {
-    kodiDB[deviceId].ws.send("Player.Open", { item: object }).catch(e => {
-      disconnected(deviceId, e);
-    });
+    if (typeof object.queueid != "undefined") {
+      kodiDB[deviceId].ws.send("Player.Open", { item: { position: object.queueid, playlistid: 0 } }).catch(e => {
+        disconnected(deviceId, e);
+      });
+    } else {
+      kodiDB[deviceId].ws.send("Player.Open", { item: object }).catch(e => {
+        disconnected(deviceId, e);
+      });
+    }
   }
 }
 
@@ -663,7 +682,7 @@ function sendContentAwareCommand(deviceId, method, params) {
           properties: ["currentwindow", "fullscreen"]
         })
         .then(window => {
-          if (window.currentwindow.label == "Fullscreen video") {
+          if (window.currentwindow.id == CAC_FULLSCREEN_VIDEO) {
             kodiDB[deviceId].ws
               .send("XBMC.GetInfoBooleans", {
                 booleans: ["VideoPlayer.HasMenu", "Pvr.IsPlayingTv"]

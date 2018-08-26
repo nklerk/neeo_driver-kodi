@@ -1,7 +1,7 @@
 "use strict";
-const images = require("../images");
+const images = require("./images");
 const neeoapi = require("neeo-sdk");
-const kodiController = require("../kodi-controller");
+const kodiController = require("./kodi-controller");
 
 const DEFAULT_PATH = ".";
 
@@ -37,12 +37,17 @@ function browse(devideId, params) {
   } else if (browseIdentifier == ".PVR") {
     return baseListPVRMenu(devideId);
   } else if (browseIdentifier == ".Movies.Movies") {
-    return kodiController.library.getMovies(devideId, {}, listOptions.offset, listOptions.limit).then(listItems => {
+    return kodiController.library.getMovies(devideId, undefined, listOptions.offset, listOptions.limit, undefined).then(listItems => {
       listOptions.total = listItems.total;
       return formatList(listItems, listOptions, browseIdentifier);
     });
   } else if (browseIdentifier == ".Movies.MoviesUnwatched") {
     return kodiController.library.getMovies(devideId, { field: "playcount", operator: "is", value: "0" }, listOptions.offset, listOptions.limit).then(listItems => {
+      listOptions.total = listItems.total;
+      return formatList(listItems, listOptions, browseIdentifier);
+    });
+  } else if (browseIdentifier == ".Movies.MoviesInprogress") {
+    return kodiController.library.getMovies(devideId, { operator: "true", field: "inprogress", value: "true" }, listOptions.offset, listOptions.limit, { method: "lastplayed", order: "descending" }).then(listItems => {
       listOptions.total = listItems.total;
       return formatList(listItems, listOptions, browseIdentifier);
     });
@@ -93,6 +98,11 @@ function browse(devideId, params) {
     });
   } else if (browseIdentifier == ".PVR.Recordings") {
     return kodiController.library.getPvrRecordings(devideId, listOptions.offset, listOptions.limit).then(listItems => {
+      listOptions.total = listItems.total;
+      return formatList(listItems, listOptions, browseIdentifier);
+    });
+  } else if (browseIdentifier == ".QUEUE") {
+    return kodiController.library.getQueue(devideId, listOptions.offset, listOptions.limit).then(listItems => {
       listOptions.total = listItems.total;
       return formatList(listItems, listOptions, browseIdentifier);
     });
@@ -153,10 +163,10 @@ function formatList(itemlist, listOptions, title) {
 function baseListRootMenu(deviceId) {
   const options = {
     title: `Media`,
-    totalMatchingItems: 2,
+    totalMatchingItems: 0,
     browseIdentifier: ".",
     offset: 0,
-    limit: 2
+    limit: 0
   };
   const list = neeoapi.buildBrowseList(options);
 
@@ -183,13 +193,15 @@ function baseListRootMenu(deviceId) {
       browseIdentifier: ".PVR"
     });
   } else {
-    list.addListHeader("Kodi is not connected");
     list.addListItem({
-      title: "Tap to refresh",
-      thumbnailUri: images.icon_movie,
-      browseIdentifier: "."
+      title: "Kodi is not connected",
+      label: "Try loading the list again.",
+      thumbnailUri: images.logo_KODI_tp,
+      actionIdentifier: ""
     });
   }
+  list.limit = list.items.length;
+  list.totalMatchingItems = list.items.length;
   return list;
 }
 
@@ -198,10 +210,10 @@ function baseListRootMenu(deviceId) {
 function baseListMovieMenu(deviceId) {
   const options = {
     title: `Movies`,
-    totalMatchingItems: 4,
+    totalMatchingItems: 0,
     browseIdentifier: ".Movies",
     offset: 0,
-    limit: 4
+    limit: 0
   };
   const list = neeoapi.buildBrowseList(options);
 
@@ -211,6 +223,11 @@ function baseListMovieMenu(deviceId) {
       title: "Movies",
       thumbnailUri: images.icon_movie,
       browseIdentifier: ".Movies.Movies"
+    });
+    list.addListItem({
+      title: "Movies, In Progress",
+      thumbnailUri: images.icon_movie,
+      browseIdentifier: ".Movies.MoviesInprogress"
     });
     list.addListItem({
       title: "Movies, Unwatched",
@@ -235,6 +252,8 @@ function baseListMovieMenu(deviceId) {
       browseIdentifier: "."
     });
   }
+  list.limit = list.items.length;
+  list.totalMatchingItems = list.items.length;
   return list;
 }
 
@@ -243,10 +262,10 @@ function baseListMovieMenu(deviceId) {
 function baseListMusicMenu(deviceId) {
   const options = {
     title: `Music`,
-    totalMatchingItems: 3,
+    totalMatchingItems: 0,
     browseIdentifier: ".Music",
     offset: 0,
-    limit: 3
+    limit: 0
   };
   const list = neeoapi.buildBrowseList(options);
 
@@ -267,6 +286,11 @@ function baseListMusicMenu(deviceId) {
       thumbnailUri: images.icon_music,
       browseIdentifier: ".Music.Recent albums"
     });
+    list.addListItem({
+      title: "Queue",
+      thumbnailUri: images.icon_music,
+      browseIdentifier: ".QUEUE"
+    });
   } else {
     list.addListHeader("Kodi is not connected");
     list.addListItem({
@@ -275,18 +299,20 @@ function baseListMusicMenu(deviceId) {
       browseIdentifier: "."
     });
   }
+  list.limit = list.items.length;
+  list.totalMatchingItems = list.items.length;
   return list;
 }
 
 //////////////////////////////////
-// Base Music Menu
+// Base TV Shows Menu
 function baseListTVShowsMenu(deviceId) {
   const options = {
     title: `TV Shows`,
-    totalMatchingItems: 2,
+    totalMatchingItems: 0,
     browseIdentifier: ".TVShows",
     offset: 0,
-    limit: 2
+    limit: 0
   };
   const list = neeoapi.buildBrowseList(options);
 
@@ -310,6 +336,8 @@ function baseListTVShowsMenu(deviceId) {
       browseIdentifier: "."
     });
   }
+  list.limit = list.items.length;
+  list.totalMatchingItems = list.items.length;
   return list;
 }
 
@@ -318,10 +346,10 @@ function baseListTVShowsMenu(deviceId) {
 function baseListPVRMenu(deviceId) {
   const options = {
     title: `PVR`,
-    totalMatchingItems: 2,
+    totalMatchingItems: 0,
     browseIdentifier: ".PVR",
     offset: 0,
-    limit: 2
+    limit: 0
   };
   const list = neeoapi.buildBrowseList(options);
 
@@ -345,5 +373,7 @@ function baseListPVRMenu(deviceId) {
       browseIdentifier: "."
     });
   }
+  list.limit = list.items.length;
+  list.totalMatchingItems = list.items.length;
   return list;
 }

@@ -19,7 +19,7 @@ function itemCheck(x, items) {
 }
 
 function imageToHttp(kodiInstance, uri) {
-  return `http://${kodiInstance.ws.username}:${kodiInstance.ws.password}@${kodiInstance.ws.options.host}:${kodiInstance.ws.httpPort}/image/` + encodeURIComponent(uri);
+  return `http://${kodiInstance.ws.username}:${kodiInstance.ws.password}@${kodiInstance.ws.options.host}:${kodiInstance.ws.httpPort}/vfs/` + encodeURIComponent(uri);
 }
 
 function movieTitle(movie) {

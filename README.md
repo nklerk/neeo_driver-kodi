@@ -2,9 +2,11 @@
 
 This will be a full featured kodi driver for NEEO.
 This driver is in an early beta stage so expect issue.
-I kindly request to only report crashes including crashlogs and hold on to feature requests for now.
+I kindly request to only report crashes including crashlogs, Features will come later.
 
-The driver state: Early BETA
+## Remove the device you are using from NEEO before using this new version. I still make a lot of changes with every version to find the sweet spot.
+
+## The driver state: Early BETA
 
 ## Features
 
@@ -26,8 +28,9 @@ The driver state: Early BETA
 
 ## Caviats
 
-- Kodi password must be set to nothing. Username/Password is not handled.
+- Kodi password must be set to nothing or to "kodi". Username/Password is not being handled.
 - Kodi 17.x on Android is not supported because it lacks Zeroconf, alternatives are using KODI 18 or use LibreElec.
+- The "kodi Player" driver is NOT complete. use it for fun or show of but please Don't add bug reports for that. It's mainly unusable at this point.
 
 ## Getting Started
 
@@ -70,8 +73,8 @@ or use <f5> in Visual Studio Code
 
 In Kodi make sure to enable the following settings:
 
-- "Announce services to other systems",
-- "Allow remote control via HTTP",
+- "Announce services to other systems", (not posible on kodi v17.x on android, Upgrade to kodi v18 Beta)
+- "Allow remote control via HTTP", (Used for grabbing images)
 - "Allow remote control from applications on other systems".
 - set Kodi User/Password to either kodi/kodi or leave the password blank (default).
 
@@ -95,21 +98,23 @@ In Kodi make sure to enable the following settings:
 
 # Releases
 
-## Version 1.3.2
+## Version 1.3.8
 
+- Added Music Queue.
+- Added Movies in progress.
+- Fixed issue not showing cover art when other kodi webservice is used.
+- Fixed showing listitems x times.
+- Devices need to be re-added. sorry.
+- Fixed list error when kodi didn't report any items.
+- Rewriting browsing service for Player
+- Added generic Library Directory while still having the generic Movies, Music, etc..
+- Fixed content aware controls being dependant on english language.
+- Added disconnected message to listview.
+- Added SUBTITLE and AUDIO (Language) Buttons.
+- Removed unused code.
 - Fixed lists limited to 64 items.
 - Added PLAY PAUSE button for handeling play pause in Player, is mapped to OK button.
-
-## Version 1.3.1
-
-- rewriting browsing service for Player
-
-## Version 1.3.0
-
-- Devices need to be re-added. sorry.
-- Browsing service rewritten.
-- VOLUMESLIDER -> VOLUME
-- Added Player Components.
+- Added Player Components. (only debug mode as it's not working properly yet.)
 
 ## Version 1.2.2
 

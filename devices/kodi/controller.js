@@ -1,11 +1,7 @@
 "use strict";
 
-const commands = require("./Commands/commands");
-const browserServiceMovies = require("./BrowserService/kodi-browserService-movies");
-const browserServiceMusic = require("./BrowserService/kodi-browserService-music");
-const browserServiceTVShow = require("./BrowserService/kodi-browserService-tvshow");
-const browserServicePVR = require("./BrowserService/kodi-browserService-pvr");
-const browserService = require("./BrowserService/kodi-browserService");
+const commands = require("./kodi-commands");
+const browserService = require("./kodi-browserService");
 const kodiController = require("./kodi-controller");
 
 function onButtonPressed(name, deviceId) {
@@ -23,45 +19,52 @@ function onButtonPressed(name, deviceId) {
 function libraryGetter(deviceId, params) {
   return browserService.browse(deviceId, params);
 }
-
 function libraryAction(deviceId, params) {
   browserService.action(deviceId, params.actionIdentifier);
 }
 
 // Movies
 function movieLibraryGetter(deviceId, params) {
-  return browserServiceMovies.browse(deviceId, params);
+  params.browseIdentifier = params.browseIdentifier || ".Movies";
+  return browserService.browse(deviceId, params);
 }
-
 function movieLibraryAction(deviceId, params) {
-  browserServiceMovies.action(deviceId, params.actionIdentifier);
+  browserService.action(deviceId, params.actionIdentifier);
 }
 
 //Music
 function musicLibraryGetter(deviceId, params) {
-  return browserServiceMusic.browse(deviceId, params);
+  params.browseIdentifier = params.browseIdentifier || ".Music";
+  return browserService.browse(deviceId, params);
 }
-
 function musicLibraryAction(deviceId, params) {
-  browserServiceMusic.action(deviceId, params.actionIdentifier);
+  browserService.action(deviceId, params.actionIdentifier);
 }
 
 //TV Show
 function tvshowLibraryGetter(deviceId, params) {
-  return browserServiceTVShow.browse(deviceId, params);
+  params.browseIdentifier = params.browseIdentifier || ".TVShows";
+  return browserService.browse(deviceId, params);
 }
-
 function tvshowLibraryAction(deviceId, params) {
-  browserServiceTVShow.action(deviceId, params.actionIdentifier);
+  browserService.action(deviceId, params.actionIdentifier);
 }
 
 // TV
 function pvrLibraryGetter(deviceId, params) {
-  return browserServicePVR.browse(deviceId, params);
+  params.browseIdentifier = params.browseIdentifier || ".PVR";
+  return browserService.browse(deviceId, params);
+}
+function pvrLibraryAction(deviceId, params) {
+  browserService.action(deviceId, params.actionIdentifier);
 }
 
-function pvrLibraryAction(deviceId, params) {
-  browserServicePVR.action(deviceId, params.actionIdentifier);
+function queueGetter(deviceId, params) {
+  params.browseIdentifier = params.browseIdentifier || ".QUEUE";
+  return browserService.browse(deviceId, params);
+}
+function queueAction(deviceId, params) {
+  browserService.action(deviceId, params.actionIdentifier);
 }
 
 //Discovery
@@ -177,6 +180,10 @@ module.exports = {
   library: {
     getter: libraryGetter,
     action: libraryAction
+  },
+  queue: {
+    getter: queueGetter,
+    action: queueAction
   },
   movieLibrary: {
     getter: movieLibraryGetter,

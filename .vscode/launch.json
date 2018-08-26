@@ -7,8 +7,14 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Debug",
+      "name": "Debug kodi",
       "program": "${workspaceFolder}\\Debug_NEEO_DRIVER-KODI.js"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug kodi Player",
+      "program": "${workspaceFolder}\\Debug_NEEO_DRIVER-KODI-PLAYER.js"
     }
   ]
 }
