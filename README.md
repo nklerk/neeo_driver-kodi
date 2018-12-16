@@ -98,6 +98,10 @@ In Kodi make sure to enable the following settings:
 
 # Releases
 
+## Version 1.3.9
+
+- bumped "neeo-sdk": "^0.52.15",
+
 ## Version 1.3.8
 
 - Added Music Queue.
