@@ -705,25 +705,25 @@ function sendContentAwareCommand(deviceId, method, params) {
                 if (!resp[`VideoPlayer.HasMenu`]) {
                   if (method == "Input.up") {
                     sendCommand(deviceId, "Player.Seek", {
-                      value: "bigforward",
+                      value: {step: "bigforward"},
                       playerid: 1
                     });
                   }
                   if (method == "Input.down") {
                     sendCommand(deviceId, "Player.Seek", {
-                      value: "bigbackward",
+                      value: {step: "bigbackward"},
                       playerid: 1
                     });
                   }
                   if (method == "Input.left") {
                     sendCommand(deviceId, "Player.Seek", {
-                      value: "smallbackward",
+                      value: {step: "smallbackward"},
                       playerid: 1
                     });
                   }
                   if (method == "Input.right") {
                     sendCommand(deviceId, "Player.Seek", {
-                      value: "smallforward",
+                      value: {step: "smallforward"},
                       playerid: 1
                     });
                   }
